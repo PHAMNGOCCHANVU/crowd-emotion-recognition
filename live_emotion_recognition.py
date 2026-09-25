@@ -21,7 +21,7 @@ def preprocess_image(image):
     return torch.from_numpy(image)
 
 
-model = torch.load('Trained_Model')
+model = torch.load('Trained_Model', weights_only=False)
 model.eval()
 
 labels = ['Happyness', 'Neutral', 'Sadness',

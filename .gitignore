@@ -1,18 +1,66 @@
+# ==============================================================================
+# Git Ignore Rules for Crowd Emotion Recognition Project
+# ==============================================================================
 
-Resources/Faces/Train/Happy/
+# --- Python Bytecode & Cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 
-Resources/Faces/Train/Normal/
+# --- Virtual Environments ---
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
 
-Resources/Faces/Train/Sad/
+# --- IDEs & Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-Resources/Faces/Train/Surprised/
+# --- Operating System Files ---
+.DS_Store
+Thumbs.db
+Desktop.ini
 
-Resources/Faces/Validation/Happy/
+# --- Jupyter Notebook Checkpoints ---
+.ipynb_checkpoints/
+*-checkpoint.ipynb
 
-Resources/Faces/Validation/Normal/
+# --- Model Weights & Heavy Checkpoints ---
+weights/
+*.pt
+*.pth
+*.onnx
+*.bin
+*.h5
+*.tflite
+*.engine
+yolov8n.pt
 
-Resources/Faces/Validation/Sad/
-
-Resources/Faces/Validation/Surprised/
-
+# --- Datasets & Media (Tránh đẩy dữ liệu ảnh lớn lên Git) ---
+Dataset/
+Dataset_Dummy/
+Dataset_Test/
+Resources/Faces/Train/
+Resources/Faces/Validation/
 Resources/ignored/
+
+# --- Large Video Files (Ngoại trừ video mẫu gốc) ---
+*.mp4
+*.avi
+*.mov
+*.mkv
+!Resources/Video/2021-09-22 17.32.08.mp4
+
+# --- Training Runs & Logs ---
+runs/
+*.log
+
+# --- Tài liệu nội bộ (User-specified) ---
+docs/
