@@ -55,11 +55,19 @@ def create_dataloaders(data_dir='Dataset', batch_size=32, input_size=112, num_wo
     train_path = os.path.join(data_dir, 'Train')
     val_path = os.path.join(data_dir, 'Validation')
 
+    # Tự động tìm thư mục Dataset nếu đường dẫn mặc định không tồn tại
     if not os.path.exists(train_path) or not os.path.exists(val_path):
-        raise FileNotFoundError(
-            f"Không tìm thấy thư mục Train/Validation tại '{data_dir}'. "
-            "Hãy đảm bảo Team Data đã tạo đúng cấu trúc thư mục."
-        )
+        if os.path.exists('Data/Dataset/Train') and os.path.exists('Data/Dataset/Validation'):
+            data_dir = 'Data/Dataset'
+            train_path = os.path.join(data_dir, 'Train')
+            val_path = os.path.join(data_dir, 'Validation')
+        else:
+            raise FileNotFoundError(
+                f"Không tìm thấy thư mục Train/Validation tại '{data_dir}' hoặc 'Data/Dataset'. "
+                "Hãy đảm bảo Team Data đã tạo đúng cấu trúc thư mục."
+            )
+
+
 
     train_dataset = datasets.ImageFolder(train_path, transform=get_transforms(input_size, is_training=True))
     val_dataset = datasets.ImageFolder(val_path, transform=get_transforms(input_size, is_training=False))

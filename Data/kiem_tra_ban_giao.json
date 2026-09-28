@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "dataset_images": 11600,
+  "counts": {
+    "Train/Happy": 2400,
+    "Train/Normal": 2400,
+    "Train/Sad": 2400,
+    "Train/Surprised": 2400,
+    "Validation/Happy": 500,
+    "Validation/Normal": 500,
+    "Validation/Sad": 500,
+    "Validation/Surprised": 500
+  },
+  "augmentation_counts": {
+    "Happy/dark": 100,
+    "Happy/gaussian_noise": 100,
+    "Happy/motion_blur": 100,
+    "Happy/uneven_light": 100,
+    "Normal/dark": 100,
+    "Normal/gaussian_noise": 100,
+    "Normal/motion_blur": 100,
+    "Normal/uneven_light": 100,
+    "Sad/dark": 100,
+    "Sad/gaussian_noise": 100,
+    "Sad/motion_blur": 100,
+    "Sad/uneven_light": 100,
+    "Surprised/dark": 100,
+    "Surprised/gaussian_noise": 100,
+    "Surprised/motion_blur": 100,
+    "Surprised/uneven_light": 100
+  },
+  "missing": [],
+  "corrupt": [],
+  "duplicate_output_paths": [],
+  "train_validation_source_leakage": [],
+  "validation_augmented": [],
+  "augmentation_unchanged": [],
+  "augmentation_shape_mismatch": [],
+  "cctv_test_images": 50,
+  "cctv_missing": [],
+  "cctv_corrupt": [],
+  "dataset_manifest_sha256": "9db2613966751bfaab64e65dd7b11aceeb5f2338c45236e45d6b567016612d05"
+}

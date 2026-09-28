@@ -149,13 +149,14 @@ def predict_emotion_from_frame(frame, force_mock=False):
             "confidence": confidence
         })
 
-    # Phân tích tổng thể đám đông qua Tầng 2
-    crowd_insights = _analytics.analyze_frame(face_results)
+    # Phân tích tổng thể đám đông qua Tầng 2 với cơ chế Cửa sổ trượt (Sliding Window)
+    crowd_insights = _analytics.analyze_stream(face_results)
 
     return {
         "faces": face_results,
         "crowd_insights": crowd_insights
     }
+
 
 
 if __name__ == '__main__':

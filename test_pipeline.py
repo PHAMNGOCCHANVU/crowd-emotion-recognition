@@ -53,12 +53,19 @@ def run_pipeline_test(video_path='Resources/Video/2021-09-22 17.32.08.mp4', max_
     detector = FaceDetector('weights/yolov8n-face.pt', conf_threshold=0.40)
 
     print("[2/3] Khởi tạo CrowdEmotionModel (ResNet-18 Backbone)...")
-    model = CrowdEmotionModel(num_classes=4, freeze_backbone=True)
+    model = CrowdEmotionModel(num_classes=4, freeze_backbone=False)
+    weights_path = 'weights/crowd_emotion_resnet18.pt'
+    if os.path.exists(weights_path):
+        model.load_state_dict(torch.load(weights_path, map_location=device, weights_only=True))
+        print(f"[INFO] Đã nạp thành công trọng số đã huấn luyện: {weights_path}")
+    else:
+        print("[WARNING] Chưa có file trọng số đã train. Dùng backbone ImageNet mặc định.")
     model.to(device)
     model.eval()
 
-    print("[3/3] Khởi tạo CrowdAnalytics (Tier 2)...")
-    analytics = CrowdAnalytics(happy_thresh=0.25, panic_thresh=0.20, curious_thresh=0.20)
+    print("[3/3] Khởi tạo Advanced CrowdAnalytics (Tier 2 với Cửa sổ trượt)...")
+    analytics = CrowdAnalytics(window_size=30, happy_thresh=0.25, panic_thresh=0.20, curious_thresh=0.20)
+
 
     if not os.path.exists(video_path):
         print(f"[ERROR] Không tìm thấy video tại '{video_path}'!")
@@ -99,15 +106,17 @@ def run_pipeline_test(video_path='Resources/Video/2021-09-22 17.32.08.mp4', max_
                 "confidence": round(prob.item(), 2)
             })
 
-        # Tầng 2: Phân tích đám đông
-        crowd_res = analytics.analyze_frame(frame_results)
+        # Tầng 2: Phân tích đám đông qua Cửa sổ trượt
+        crowd_res = analytics.analyze_stream(frame_results)
 
         # In log định kỳ mỗi 10 frames
         if frame_count % 10 == 0:
             print(
                 f"Frame {frame_count:03d} | Faces: {len(faces)} | "
+                f"CMS: {crowd_res['crowd_mood_score']:>5.2f} | "
                 f"Mood: {crowd_res['crowd_mood']:<24} | Alert: {crowd_res['alert_level']}"
             )
+
 
         frame_count += 1
 
