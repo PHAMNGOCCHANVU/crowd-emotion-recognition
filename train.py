@@ -90,10 +90,13 @@ def run_training(
     data_dir='Data/Dataset',
     epochs_head=6,
     epochs_finetune=14,
-    batch_size=64,
+    batch_size=32,
+    input_size=224,
+    dropout_rate=0.5,
+    unfreeze_all=True,
     lr_head=1e-3,
-    lr_backbone=1e-4,
-    lr_classifier=5e-4,
+    lr_backbone=1e-5,
+    lr_classifier=3e-4,
     label_smoothing=0.1,
     weight_decay=1e-4,
     save_path='weights/crowd_emotion_resnet18.pt',
@@ -102,10 +105,15 @@ def run_training(
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("=" * 70)
-    print("🚀 BẮT ĐẦU HUẤN LUYỆN CORE AI MODEL — TÌM CỰC TIỂU PHẲNG (FLAT MINIMUM)")
+    print("🚀 BẮT ĐẦU HUẤN LUYỆN CORE AI MODEL — CẤU HÌNH NÂNG CẤP FLAT MINIMUM")
     print(f"   Thiết bị tính toán:   {device}")
     print(f"   Thư mục dữ liệu:     {data_dir}")
+    print(f"   Kích thước đầu vào:  {input_size}x{input_size}")
     print(f"   Batch size:          {batch_size}")
+    print(f"   Dropout:             {dropout_rate} (Thu hẹp Generalization Gap)")
+    print(f"   Unfreeze Backbone:   {'TOÀN BỘ (All layers)' if unfreeze_all else '2 tầng cuối'}")
+    print(f"   LR Backbone:         {lr_backbone} (Bảo toàn trọng số ImageNet)")
+    print(f"   LR Classifier:       {lr_classifier}")
     print(f"   Label Smoothing:     {label_smoothing} (Chống Overfitting)")
     print(f"   Weight Decay (AdamW):{weight_decay} (Phạt độ dốc lớn)")
     print(f"   File lưu model:      {save_path}")
@@ -122,11 +130,13 @@ def run_training(
 
     # 2. Tạo DataLoaders (kèm Data Augmentation cho CCTV)
     train_loader, val_loader, classes = create_dataloaders(
-        data_dir=data_dir, batch_size=batch_size, input_size=112
+        data_dir=data_dir, batch_size=batch_size, input_size=input_size
     )
 
-    # 3. Khởi tạo mô hình ResNet-18 (Head mới, freeze backbone)
-    model = CrowdEmotionModel(num_classes=4, freeze_backbone=True).to(device)
+    # 3. Khởi tạo mô hình ResNet-18 (Head mới, freeze backbone, Dropout 0.5)
+    model = CrowdEmotionModel(
+        num_classes=4, freeze_backbone=True, dropout_rate=dropout_rate
+    ).to(device)
 
     best_val_acc = 0.0
     best_val_loss = float('inf')
@@ -178,14 +188,17 @@ def run_training(
     # GIAI ĐOẠN 2B: FINE-TUNE SÂU BACKBONE (HẠ CÁNH VÀO FLAT MINIMUM)
     # =========================================================================
     print("\n" + "=" * 70)
-    print(f"🔹 GIAI ĐOẠN 2B: FINE-TUNING SÂU BACKBONE & HẠ CÁNH ÊM ÁI ({epochs_finetune} EPOCHS)")
+    print(f"🔹 GIAI ĐOẠN 2B: FINE-TUNING SÂU TOÀN BỘ BACKBONE & HẠ CÁNH ÊM ÁI ({epochs_finetune} EPOCHS)")
     print("=" * 70)
 
     # Nạp lại checkpoint tốt nhất của Giai đoạn 2A
     if os.path.exists(save_path):
         model.load_state_dict(torch.load(save_path, map_location=device, weights_only=True))
 
-    model.unfreeze_backbone(num_layers_to_unfreeze=2)
+    if unfreeze_all:
+        model.unfreeze_backbone(num_layers_to_unfreeze=None)
+    else:
+        model.unfreeze_backbone(num_layers_to_unfreeze=2)
 
     optimizer_ft = AdamW([
         {'params': model.backbone.parameters(), 'lr': lr_backbone},
@@ -248,8 +261,13 @@ if __name__ == '__main__':
     parser.add_argument('--data-dir', type=str, default='Data/Dataset', help='Thư mục dữ liệu')
     parser.add_argument('--epochs-head', type=int, default=6, help='Số epoch train Head')
     parser.add_argument('--epochs-ft', type=int, default=14, help='Số epoch fine-tuning')
-    parser.add_argument('--batch-size', type=int, default=64, help='Batch size')
+    parser.add_argument('--batch-size', type=int, default=32, help='Batch size (mặc định 32)')
+    parser.add_argument('--input-size', type=int, default=224, help='Kích thước ảnh đầu vào (mặc định 224)')
+    parser.add_argument('--dropout', type=float, default=0.5, help='Hệ số Dropout cho Classifier (mặc định 0.5)')
+    parser.add_argument('--lr-backbone', type=float, default=1e-5, help='Learning rate Backbone (mặc định 1e-5)')
+    parser.add_argument('--lr-classifier', type=float, default=3e-4, help='Learning rate Classifier (mặc định 3e-4)')
     parser.add_argument('--label-smoothing', type=float, default=0.1, help='Hệ số Label Smoothing')
+    parser.add_argument('--unfreeze-all', action='store_true', default=True, help='Mở khóa toàn bộ Backbone')
     args = parser.parse_args()
 
     run_training(
@@ -257,5 +275,10 @@ if __name__ == '__main__':
         epochs_head=args.epochs_head,
         epochs_finetune=args.epochs_ft,
         batch_size=args.batch_size,
+        input_size=args.input_size,
+        dropout_rate=args.dropout,
+        unfreeze_all=args.unfreeze_all,
+        lr_backbone=args.lr_backbone,
+        lr_classifier=args.lr_classifier,
         label_smoothing=args.label_smoothing
     )

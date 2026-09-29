@@ -20,7 +20,7 @@ IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
 
-def get_transforms(input_size=112, is_training=True):
+def get_transforms(input_size=224, is_training=True):
     """
     Tạo pipeline tiền xử lý ảnh và Data Augmentation thích nghi với CCTV.
     - Ban ngày/ban đêm, ánh sáng đèn: ColorJitter (brightness, contrast).
@@ -45,7 +45,7 @@ def get_transforms(input_size=112, is_training=True):
         ])
 
 
-def create_dataloaders(data_dir='Dataset', batch_size=32, input_size=112, num_workers=0):
+def create_dataloaders(data_dir='Dataset', batch_size=32, input_size=224, num_workers=0):
     """
     Nạp dữ liệu từ thư mục Dataset theo cấu trúc:
     Dataset/

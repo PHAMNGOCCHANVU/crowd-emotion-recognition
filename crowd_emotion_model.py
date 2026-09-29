@@ -13,7 +13,7 @@ class CrowdEmotionModel(nn.Module):
     - Backbone: ResNet-18 pre-trained trên ImageNet (năng lực trích xuất vượt trội mạng CNN nhỏ).
     - Head: Classification layer cho 4 nhãn chuẩn (Happy, Normal, Sad, Surprised).
     """
-    def __init__(self, num_classes=4, freeze_backbone=True):
+    def __init__(self, num_classes=4, freeze_backbone=True, dropout_rate=0.5):
         super(CrowdEmotionModel, self).__init__()
         self.num_classes = num_classes
 
@@ -29,12 +29,12 @@ class CrowdEmotionModel(nn.Module):
             for param in self.backbone.parameters():
                 param.requires_grad = False
 
-        # Tầng phân loại mới cho 4 nhãn
+        # Tầng phân loại mới cho 4 nhãn với Dropout tùy biến (mặc định 0.5 chống overfit)
         self.classifier = nn.Sequential(
-            nn.Dropout(0.3),
+            nn.Dropout(dropout_rate),
             nn.Linear(self.feature_dim, 128),
             nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.Dropout(dropout_rate),
             nn.Linear(128, num_classes)
         )
 
@@ -64,15 +64,21 @@ class CrowdEmotionModel(nn.Module):
         max_probs, predictions = probs.max(1)
         return max_probs, predictions
 
-    def unfreeze_backbone(self, num_layers_to_unfreeze=2):
+    def unfreeze_backbone(self, num_layers_to_unfreeze=None):
         """
-        Mở khóa một số tầng cuối của backbone để fine-tuning sâu hơn ở Tuần 2.
+        Mở khóa một số tầng cuối hoặc toàn bộ backbone để fine-tuning sâu.
+        Nếu num_layers_to_unfreeze is None hoặc >= số layers: mở khóa toàn bộ backbone.
         """
         children = list(self.backbone.children())
-        for child in children[-num_layers_to_unfreeze:]:
-            for param in child.parameters():
+        if num_layers_to_unfreeze is None or num_layers_to_unfreeze >= len(children):
+            for param in self.backbone.parameters():
                 param.requires_grad = True
-        print(f"[INFO] Unfroze last {num_layers_to_unfreeze} layers of ResNet-18 backbone.")
+            print("[INFO] Unfroze ALL layers of ResNet-18 backbone for full fine-tuning.")
+        else:
+            for child in children[-num_layers_to_unfreeze:]:
+                for param in child.parameters():
+                    param.requires_grad = True
+            print(f"[INFO] Unfroze last {num_layers_to_unfreeze} layers of ResNet-18 backbone.")
 
 
 if __name__ == '__main__':

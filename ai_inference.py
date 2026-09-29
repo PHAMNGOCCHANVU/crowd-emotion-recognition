@@ -79,7 +79,7 @@ def _ensure_models_loaded():
             print(f"[WARNING] Không thể load EmotionModel: {e}")
 
 
-def _preprocess_face(face_bgr, target_size=(112, 112)):
+def _preprocess_face(face_bgr, target_size=(224, 224)):
     """Tiền xử lý ảnh khuôn mặt BGR thành Tensor chuẩn ImageNet."""
     face_rgb = cv.cvtColor(face_bgr, cv.COLOR_BGR2RGB)
     face_resized = cv.resize(face_rgb, target_size)

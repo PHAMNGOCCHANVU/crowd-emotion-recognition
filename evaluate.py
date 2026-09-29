@@ -30,7 +30,8 @@ def evaluate_model(
     model_path='weights/crowd_emotion_resnet18.pt',
     data_dir='Data/Dataset/Validation',
     output_dir='docs',
-    history_path='train_history.json'
+    history_path='train_history.json',
+    input_size=224
 ):
     os.makedirs(output_dir, exist_ok=True)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -38,6 +39,7 @@ def evaluate_model(
     print("📊 BẮT ĐẦU ĐÁNH GIÁ MÔ HÌNH VÀ TRÍCH XUẤT KẾT QUẢ")
     print(f"   Model:      {model_path}")
     print(f"   Tập dữ liệu:{data_dir}")
+    print(f"   Input Size: {input_size}x{input_size}")
     print(f"   Thiết bị:   {device}")
     print("=" * 65)
 
@@ -51,7 +53,7 @@ def evaluate_model(
     model.eval()
 
     # 2. Nạp dữ liệu Validation
-    val_dataset = datasets.ImageFolder(data_dir, transform=get_transforms(input_size=112, is_training=False))
+    val_dataset = datasets.ImageFolder(data_dir, transform=get_transforms(input_size=input_size, is_training=False))
     val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
 
     all_preds = []
