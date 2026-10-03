@@ -33,7 +33,6 @@ Desktop.ini
 *-checkpoint.ipynb
 
 # --- Model Weights & Heavy Checkpoints ---
-weights/
 *.pt
 *.pth
 *.onnx
@@ -42,6 +41,10 @@ weights/
 *.tflite
 *.engine
 yolov8n.pt
+
+# Ngoại lệ cho trọng số mô hình chính thức của dự án
+!weights/crowd_emotion_resnet18.pt
+!weights/yolov8n-face.pt
 
 # --- Datasets & Media (Tránh đẩy dữ liệu ảnh lớn lên Git) ---
 Dataset/
