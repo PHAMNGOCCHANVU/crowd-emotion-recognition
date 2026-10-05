@@ -26,3 +26,12 @@ The project is structured as follow:
 - We preprocess the images by extracting faces using pretrained face detector model (haar_cascade). Other face detector algorithms such as MTCNN or Mediapipe can be used. The dataset is then splited into test and valitation sets in different folders.
 - We then build a CNN model with Pytorch to classify face emotions ![model](./model.py). The model is then trained on the training set and saved. 
 - Finally we will used the pre-trained model with opencv to recognize facial emotion on live streams videos. 
+
+### Crowd Emotion Dashboard
+Run the Streamlit dashboard with:
+```powershell
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+The dashboard calls `predict_emotion_from_frame(frame)` from `ai_inference.py`. It uses AI-01 mock results when detector weights are unavailable. To enable real inference, provide `weights/yolov8n-face.pt` and `weights/crowd_emotion_resnet18.pt`; the latter is produced after the emotion model is trained. The expected return structure is documented in `ai_inference.py`.
