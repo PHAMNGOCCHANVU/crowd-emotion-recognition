@@ -67,6 +67,9 @@ d:\emotion_recognition\
 ├── crowd_analytics.py                  ← Tầng phân tích đám đông & cảnh báo ngưỡng
 ├── data_loader.py                      ← Pipeline nạp dữ liệu + Data Augmentation
 ├── ai_inference.py                     ← Interface chuẩn bàn giao cho Team UI
+├── app.py                              ← Web Dashboard giám sát (Thành viên E - Streamlit)
+├── video_stream.py                     ← Xử lý luồng video & vẽ bounding box (Thành viên E)
+├── alert_engine.py                     ← Bộ phân loại mức độ cảnh báo an ninh (Thành viên E)
 ├── test_pipeline.py                    ← Script kiểm thử End-to-End toàn hệ thống
 ├── feature_extractor.py                ← Script bóc tách backbone gốc (đối chứng baseline)
 └── live_emotion_recognition.py         ← File demo gốc của tác giả (tham khảo)
@@ -87,7 +90,17 @@ Khuyến nghị sử dụng Python 3.10 – 3.12 và môi trường ảo (`.venv
 pip install -r requirements.txt
 ```
 
-### 4.2. Chạy kiểm thử End-to-End toàn bộ chuỗi AI
+### 4.2. Khởi chạy Giao diện Giám sát Real-time (Streamlit Dashboard)
+Khởi chạy giao diện giám sát Streamlit do Thành viên E tích hợp:
+
+```powershell
+streamlit run app.py
+```
+* Dashboard tự động kết nối với `predict_emotion_from_frame` trong `ai_inference.py`.
+* Hỗ trợ chọn nguồn video (Video kiểm thử CCTV hoặc Webcam trực tiếp).
+* Hiển thị khung hình phát hiện khuôn mặt, phân phối cảm xúc, cảnh báo an ninh và biểu đồ xu hướng thời gian thực.
+
+### 4.3. Chạy kiểm thử End-to-End toàn bộ chuỗi AI
 Kiểm tra toàn bộ luồng từ đọc video ➔ phát hiện mặt ➔ đoán cảm xúc ➔ phân tích đám đông & đo FPS:
 
 ```powershell
@@ -95,7 +108,7 @@ python test_pipeline.py
 ```
 *(Kết quả thử nghiệm đạt **~31.4 FPS trên CPU**, bắt chính xác 60/60 khuôn mặt trên video mẫu).*
 
-### 4.3. Kiểm tra riêng từng Module
+### 4.4. Kiểm tra riêng từng Module
 * **Kiểm tra bộ bắt mặt từ xa:** `python face_detector.py`
 * **Kiểm tra mô hình ResNet-18:** `python crowd_emotion_model.py`
 * **Kiểm tra logic phân tích đám đông:** `python crowd_analytics.py`

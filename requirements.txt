@@ -10,3 +10,6 @@ ultralytics>=8.1.0
 
 # Data & Utilities
 Pillow>=9.5.0
+
+# Web Dashboard (Thành viên E)
+streamlit>=1.40
