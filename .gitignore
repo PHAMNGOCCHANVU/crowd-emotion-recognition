@@ -1,5 +1,5 @@
 # ==============================================================================
-# Git Ignore Rules for Crowd Emotion Recognition Project
+# Git Ignore Rules for AI Mock Interview & Emotion Recognition Platform
 # ==============================================================================
 
 # --- Python Bytecode & Cache ---
@@ -32,6 +32,26 @@ Desktop.ini
 .ipynb_checkpoints/
 *-checkpoint.ipynb
 
+# --- Node.js & Frontend Build Artifacts ---
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Databases & SQLite Local Storage ---
+*.db
+*.sqlite
+*.sqlite3
+backend/interview.db
+
+# --- Environment Variables & Secrets ---
+.env
+.env.local
+.env.*.local
+
 # --- Model Weights & Heavy Checkpoints ---
 *.pt
 *.pth
@@ -42,14 +62,15 @@ Desktop.ini
 *.engine
 yolov8n.pt
 
-# Ngoại lệ cho trọng số mô hình chính thức của dự án
+# Ngoại lệ: Giữ lại trọng số mô hình chính thức đã huấn luyện của dự án
 !weights/crowd_emotion_resnet18.pt
 !weights/yolov8n-face.pt
 
-# --- Datasets & Media (Tránh đẩy dữ liệu ảnh lớn lên Git) ---
+# --- Datasets & Media (Tránh đẩy dữ liệu ảnh/video quá lớn lên Git) ---
 Dataset/
 Dataset_Dummy/
 Dataset_Test/
+Data/
 Resources/Faces/Train/
 Resources/Faces/Validation/
 Resources/ignored/
@@ -59,11 +80,9 @@ Resources/ignored/
 *.avi
 *.mov
 *.mkv
+*.webm
 !Resources/Video/2021-09-22 17.32.08.mp4
 
 # --- Training Runs & Logs ---
 runs/
 *.log
-
-# --- Tài liệu nội bộ (User-specified) ---
-docs/

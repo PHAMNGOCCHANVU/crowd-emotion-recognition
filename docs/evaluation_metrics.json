@@ -1,0 +1,28 @@
+{
+  "Happy": {
+    "precision": 0.7915,
+    "recall": 0.706,
+    "f1_score": 0.7463,
+    "support": 500
+  },
+  "Normal": {
+    "precision": 0.5749,
+    "recall": 0.752,
+    "f1_score": 0.6516,
+    "support": 500
+  },
+  "Sad": {
+    "precision": 0.649,
+    "recall": 0.514,
+    "f1_score": 0.5737,
+    "support": 500
+  },
+  "Surprised": {
+    "precision": 0.7877,
+    "recall": 0.794,
+    "f1_score": 0.7908,
+    "support": 500
+  },
+  "overall_accuracy": 0.6915,
+  "total_samples": 2000
+}
