@@ -62,7 +62,7 @@ backend/interview.db
 *.engine
 yolov8n.pt
 
-# Ngoại lệ: Giữ lại trọng số mô hình chính thức đã huấn luyện của dự án
+# Ngoại lệ cho trọng số mô hình chính thức của dự án
 !weights/crowd_emotion_resnet18.pt
 !weights/yolov8n-face.pt
 
@@ -86,3 +86,6 @@ Resources/ignored/
 # --- Training Runs & Logs ---
 runs/
 *.log
+
+# --- Tài liệu nội bộ (User-specified) ---
+docs/
