@@ -1,0 +1,6 @@
+-r requirements-speech-llm.txt
+pytest>=8,<10
+# Lightweight AI-01 worker/API integration tests (FER is replaced with a test double).
+sqlalchemy>=2.0,<3
+fastapi>=0.109,<1
+python-multipart>=0.0.9

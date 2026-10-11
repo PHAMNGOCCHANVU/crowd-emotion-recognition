@@ -1,11 +1,13 @@
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Đảm bảo đường dẫn import cho toàn bộ backend
 CURRENT_DIR = Path(__file__).resolve().parent
 ROOT_DIR = CURRENT_DIR.parent
+load_dotenv(ROOT_DIR / ".env", override=False)
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
@@ -18,7 +20,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="AI Mock Interview Platform API",
-    description="Backend API cho Nền tảng Phỏng vấn thử Đa phương thức (FER + Whisper + Gemini)",
+    description="Backend API cho Nền tảng Phỏng vấn thử Đa phương thức (FER + Groq Whisper + Gemini)",
     version="1.0.0",
 )
 
