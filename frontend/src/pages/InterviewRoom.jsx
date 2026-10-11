@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import VideoPreview from '../components/VideoPreview';
 import { api } from '../services/api';
+import { CircleDot, Clock3, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 export default function InterviewRoom({ session, stream, onFinishInterview }) {
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -91,11 +92,11 @@ export default function InterviewRoom({ session, stream, onFinishInterview }) {
   const seconds = timeLeft % 60;
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '30px auto', padding: '0 20px' }}>
+    <div className="page-shell">
       {/* Thanh tiến độ */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div style={{ fontSize: '14px', color: '#94a3b8' }}>
-          Vị trí: <strong style={{ color: '#f8fafc' }}>{session.role_name}</strong>
+        <div className="muted" style={{ fontSize: '14px' }}>
+          Vị trí: <strong style={{ color: '#1b2b43' }}>{session.role_name}</strong>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           {questions.map((q, idx) => (
@@ -105,7 +106,7 @@ export default function InterviewRoom({ session, stream, onFinishInterview }) {
                 width: '32px',
                 height: '8px',
                 borderRadius: '4px',
-                background: idx === currentIdx ? '#3b82f6' : idx < currentIdx ? '#10b981' : '#334155',
+                background: idx === currentIdx ? '#1e5b9e' : idx < currentIdx ? '#4b9a6a' : '#dbe4ef',
               }}
             />
           ))}
@@ -119,23 +120,23 @@ export default function InterviewRoom({ session, stream, onFinishInterview }) {
           fontSize: '14px',
           border: '1px solid #334155',
         }}>
-          ⏱️ {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+          <Clock3 size={15} style={{ verticalAlign: 'middle', marginRight: 5 }} />{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
         </div>
       </div>
 
       {/* Khung câu hỏi nổi bật */}
       <div style={{
-        background: '#1e293b',
+        background: '#fff',
         padding: '24px',
         borderRadius: '16px',
-        border: '1px solid #3b82f6',
+        border: '1px solid #cbdced',
         marginBottom: '24px',
         boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.2)',
       }}>
-        <div style={{ fontSize: '13px', color: '#60a5fa', fontWeight: 600, marginBottom: '6px' }}>
+        <div style={{ fontSize: '12px', color: '#356ca8', fontWeight: 800, letterSpacing: '.08em', marginBottom: '8px' }}>
           CÂU HỎI {currentIdx + 1} / {questions.length}
         </div>
-        <h2 style={{ margin: 0, fontSize: '20px', color: '#f8fafc', lineHeight: 1.5 }}>
+        <h2 style={{ margin: 0, fontSize: '20px', color: '#1b2b43', lineHeight: 1.5 }}>
           "{currentQuestion.question_text}"
         </h2>
       </div>
@@ -146,13 +147,13 @@ export default function InterviewRoom({ session, stream, onFinishInterview }) {
           <VideoPreview stream={stream} />
         </div>
 
-        <div style={{ background: '#1e293b', padding: '24px', borderRadius: '16px', border: '1px solid #334155', textAlign: 'center' }}>
+        <div className="panel" style={{ padding: '24px', textAlign: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '20px' }}>
             <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite' }}></span>
-            <span style={{ fontSize: '14px', color: '#f8fafc', fontWeight: 600 }}>Đang ghi hình câu trả lời</span>
+            <span style={{ fontSize: '14px', color: '#1b2b43', fontWeight: 700 }}><CircleDot size={14} color="#c94b4b" style={{ verticalAlign: 'middle', marginRight: 5 }} />Đang ghi hình câu trả lời</span>
           </div>
 
-          <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '24px' }}>
+          <p className="muted" style={{ fontSize: '13px', lineHeight: 1.5, marginBottom: '24px' }}>
             Sau khi trả lời xong, bấm nút bên dưới để chuyển sang câu tiếp theo ngay tức khắc.
           </p>
 
@@ -163,7 +164,7 @@ export default function InterviewRoom({ session, stream, onFinishInterview }) {
               padding: '16px',
               borderRadius: '10px',
               border: 'none',
-              background: '#3b82f6',
+              background: '#1e5b9e',
               color: '#fff',
               fontSize: '15px',
               fontWeight: 700,
@@ -171,7 +172,7 @@ export default function InterviewRoom({ session, stream, onFinishInterview }) {
               transition: 'background 0.2s',
             }}
           >
-            {currentIdx + 1 < questions.length ? 'Hoàn thành câu ➔ Câu tiếp theo' : 'Hoàn thành & Xem kết quả 🎯'}
+            {currentIdx + 1 < questions.length ? <><CheckCircle2 size={15} style={{ verticalAlign: 'middle', marginRight: 6 }} />Hoàn thành câu <ArrowRight size={15} style={{ verticalAlign: 'middle', marginLeft: 5 }} /></> : 'Hoàn thành & Xem kết quả'}
           </button>
         </div>
       </div>

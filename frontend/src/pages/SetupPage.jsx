@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import VideoPreview from '../components/VideoPreview';
 import { api } from '../services/api';
+import { Camera, ArrowRight, ShieldCheck } from 'lucide-react';
 
 const ROLES = [
   'Software Engineer',
@@ -64,21 +65,22 @@ export default function SetupPage({ onStartInterview }) {
   };
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '40px auto', padding: '0 20px' }}>
-      <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: 800, margin: '0 0 10px', color: '#f8fafc' }}>
-          🎯 AI Mock Interview Platform
+    <div className="page-shell">
+      <div style={{ marginBottom: '36px' }}>
+        <div className="eyebrow">InterviewLab · Practice session</div>
+        <h1 className="page-title">
+          Chuẩn bị cho buổi phỏng vấn
         </h1>
-        <p style={{ fontSize: '16px', color: '#94a3b8', margin: 0 }}>
-          Luyện phỏng vấn thử đa phương thức: Đánh giá đồng thời Chuyên môn (Verbal) & Phong thái tự tin (Non-verbal)
+        <p className="page-subtitle">
+          Kiểm tra thiết bị và thiết lập phiên luyện tập trước khi bắt đầu.
         </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '32px', alignItems: 'start' }}>
         {/* Cột trái: Kiểm tra thiết bị */}
-        <div style={{ background: '#1e293b', padding: '24px', borderRadius: '16px', border: '1px solid #334155' }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: '18px', color: '#f1f5f9' }}>
-            📹 Kiểm tra Camera & Micro
+        <div className="panel" style={{ padding: '24px' }}>
+          <h3 className="panel-title" style={{ marginBottom: 16 }}>
+            <Camera size={16} style={{ verticalAlign: 'middle', marginRight: 8 }} />Kiểm tra Camera & Micro
           </h3>
           {cameraError ? (
             <div style={{ padding: '20px', background: '#451a1a', borderRadius: '12px', color: '#fca5a5', fontSize: '14px' }}>
@@ -93,7 +95,7 @@ export default function SetupPage({ onStartInterview }) {
         </div>
 
         {/* Cột phải: Chọn ngành nghề & JD */}
-        <div style={{ background: '#1e293b', padding: '24px', borderRadius: '16px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e2e8f0', marginBottom: '8px' }}>
               1. Chọn Vị trí Ứng tuyển
@@ -105,9 +107,9 @@ export default function SetupPage({ onStartInterview }) {
                 width: '100%',
                 padding: '12px 14px',
                 borderRadius: '8px',
-                background: '#0f172a',
-                color: '#f8fafc',
-                border: '1px solid #475569',
+                background: '#f8fafc',
+                color: '#1b2b43',
+                border: '1px solid #dce3ed',
                 fontSize: '14px',
                 outline: 'none',
               }}
@@ -131,9 +133,9 @@ export default function SetupPage({ onStartInterview }) {
                 width: '100%',
                 padding: '12px 14px',
                 borderRadius: '8px',
-                background: '#0f172a',
-                color: '#f8fafc',
-                border: '1px solid #475569',
+                background: '#f8fafc',
+                color: '#1b2b43',
+                border: '1px solid #dce3ed',
                 fontSize: '13px',
                 outline: 'none',
                 boxSizing: 'border-box',
@@ -149,7 +151,7 @@ export default function SetupPage({ onStartInterview }) {
               padding: '16px',
               borderRadius: '10px',
               border: 'none',
-              background: loading ? '#475569' : '#3b82f6',
+              background: loading ? '#9aa8ba' : '#1e5b9e',
               color: '#fff',
               fontSize: '16px',
               fontWeight: 700,
@@ -158,7 +160,7 @@ export default function SetupPage({ onStartInterview }) {
               transition: 'background 0.2s',
             }}
           >
-            {loading ? 'Đang khởi tạo...' : '🚀 Bắt đầu Phỏng vấn Thử'}
+            {loading ? 'Đang khởi tạo...' : <>Bắt đầu phỏng vấn <ArrowRight size={16} style={{ verticalAlign: 'middle', marginLeft: 5 }} /></>}
           </button>
         </div>
       </div>

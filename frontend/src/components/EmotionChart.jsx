@@ -10,23 +10,23 @@ const EMOTION_COLORS = {
 export default function EmotionChart({ timeline = [], onSeekSecond, currentSecond = 0 }) {
   if (!timeline || timeline.length === 0) {
     return (
-      <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', background: '#1e293b', borderRadius: '12px' }}>
+      <div className="panel" style={{ padding: '24px', textAlign: 'center', color: '#718096' }}>
         Chưa có dữ liệu cảm xúc dòng thời gian.
       </div>
     );
   }
 
   return (
-    <div style={{ background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid #334155' }}>
+    <div className="panel" style={{ padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h4 style={{ margin: 0, fontSize: '15px', color: '#f8fafc' }}>
-          📊 Diễn biến Cảm xúc theo Thời gian (Nhấp vào mốc để nhảy video)
+        <h4 className="panel-title">
+          Diễn biến cảm xúc theo thời gian
         </h4>
         <div style={{ display: 'flex', gap: '14px', fontSize: '12px' }}>
           {Object.entries(EMOTION_COLORS).map(([emo, color]) => (
             <div key={emo} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ width: 10, height: 10, borderRadius: '2px', background: color }}></span>
-              <span>{emo}</span>
+              <span style={{ color: '#718096' }}>{emo}</span>
             </div>
           ))}
         </div>

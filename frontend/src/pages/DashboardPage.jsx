@@ -4,6 +4,7 @@ import VideoPreview from '../components/VideoPreview';
 import EmotionChart from '../components/EmotionChart';
 import FeedbackAccordion from '../components/FeedbackAccordion';
 import { api } from '../services/api';
+import { ArrowLeft, RotateCcw, ShieldCheck, Video, Clock3 } from 'lucide-react';
 
 export default function DashboardPage({ sessionId, blobsMap = {}, onRestart }) {
   const [loading, setLoading] = useState(true);
@@ -54,35 +55,18 @@ export default function DashboardPage({ sessionId, blobsMap = {}, onRestart }) {
   };
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '30px auto', padding: '0 20px' }}>
-      {/* Tiêu đề & Nút làm lại */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+    <div className="page-shell">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ margin: '0 0 6px', fontSize: '26px', color: '#f8fafc', fontWeight: 800 }}>
-            📊 Báo cáo Đánh giá Phỏng vấn Đa phương thức
-          </h1>
-          <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8' }}>
-            Kết quả tổng hợp từ Mô hình Cảm xúc (FER) + Whisper STT + Trí tuệ Nhân tạo Gemini
-          </p>
+          <div className="eyebrow">Interview report</div>
+          <h1 className="page-title">Báo cáo phỏng vấn</h1>
+          <p className="page-subtitle">Đánh giá tổng hợp về chuyên môn, phong thái và khả năng diễn đạt.</p>
         </div>
-        <button
-          onClick={onRestart}
-          style={{
-            padding: '10px 20px',
-            borderRadius: '8px',
-            border: '1px solid #475569',
-            background: '#1e293b',
-            color: '#f8fafc',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          🔄 Luyện tập phiên mới
-        </button>
+        <button className="secondary-button" onClick={onRestart}><RotateCcw size={15} style={{ verticalAlign: 'middle', marginRight: 7 }} />Phiên mới</button>
       </div>
 
       {/* Thẻ điểm tổng quan */}
-      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '28px' }}>
+      <div className="score-grid">
         <ScoreCard title="Điểm Tổng Hợp" score={summary.overall_score} color="#3b82f6" subtitle="60% Chuyên môn + 40% Phong thái" />
         <ScoreCard title="Năng Lực Chuyên Môn" score={summary.content_score_avg} color="#10b981" subtitle="Đánh giá theo phương pháp STAR" />
         <ScoreCard title="Chỉ Số Tự Tin (FER)" score={summary.confidence_score_avg} color="#38bdf8" subtitle="Tỷ lệ nét mặt tươi tắn & điềm đạm" />
@@ -91,54 +75,43 @@ export default function DashboardPage({ sessionId, blobsMap = {}, onRestart }) {
       </div>
 
       {/* Khu vực phát lại video đồng bộ với biểu đồ timeline */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', marginBottom: '32px' }}>
+      <div className="dashboard-grid">
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h3 style={{ margin: 0, fontSize: '16px', color: '#f1f5f9' }}>
-              🎥 Xem lại Video Câu {currentOrder} (Client-side Blob)
-            </h3>
+          <div className="panel video-panel">
+            <div className="panel-header">
+              <h3 className="panel-title"><Video size={16} style={{ verticalAlign: 'middle', marginRight: 8 }} />Video câu {currentOrder}</h3>
+              <div className="question-tabs">
             {/* Chọn câu để xem lại */}
             <div style={{ display: 'flex', gap: '6px' }}>
               {details.map((d, idx) => (
                 <button
                   key={d.order_index}
                   onClick={() => setSelectedQuestionIdx(idx)}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: selectedQuestionIdx === idx ? '#3b82f6' : '#334155',
-                    color: '#fff',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
+                  className={`question-tab ${selectedQuestionIdx === idx ? 'active' : ''}`}
                 >
                   Câu {d.order_index}
                 </button>
               ))}
             </div>
+            </div>
           </div>
 
-          <VideoPreview
-            videoBlobUrl={currentBlobUrl}
-            videoRef={videoPlayerRef}
-            onTimeUpdate={(t) => setVideoCurrentTime(t)}
-          />
-        </div>
+          <div className="video-area">
+            <VideoPreview videoBlobUrl={currentBlobUrl} videoRef={videoPlayerRef} onTimeUpdate={(t) => setVideoCurrentTime(t)} />
+          </div>
+          </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        </div>
+        <div>
           <EmotionChart
             timeline={currentDetail.emotion_timeline || []}
             onSeekSecond={handleSeekSecond}
             currentSecond={videoCurrentTime}
           />
 
-          <div style={{ background: '#1e293b', padding: '16px', borderRadius: '12px', border: '1px solid #334155' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#38bdf8', marginBottom: '6px' }}>
-              💡 Lời khuyên Phong thái cho Câu {currentOrder}:
-            </div>
-            <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>
+          <div className="insight-box">
+            <div className="insight-label">Gợi ý phong thái · Câu {currentOrder}</div>
+            <div className="insight-text">
               {currentDetail.ai_feedback?.delivery_critique || 'Đang cập nhật...'}
             </div>
           </div>
@@ -147,9 +120,7 @@ export default function DashboardPage({ sessionId, blobsMap = {}, onRestart }) {
 
       {/* Chi tiết từng câu hỏi & Nhận xét của AI */}
       <div style={{ marginBottom: '40px' }}>
-        <h3 style={{ fontSize: '18px', color: '#f8fafc', marginBottom: '16px' }}>
-          📝 Chi tiết Đánh giá Từng Câu hỏi
-        </h3>
+        <h3 className="section-heading"><ShieldCheck size={18} style={{ verticalAlign: 'middle', marginRight: 8 }} />Chi tiết đánh giá từng câu hỏi</h3>
         <FeedbackAccordion
           details={details}
           activeIndex={selectedQuestionIdx}
