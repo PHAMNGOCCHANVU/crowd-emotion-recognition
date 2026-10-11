@@ -60,7 +60,7 @@ export default function FeedbackAccordion({ details = [], activeIndex = 0, onSel
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <span style={{ fontSize: '13px', color: '#38bdf8' }}>
-                  Điểm: {item.metrics?.content_score || 80}/100
+                  Điểm: {item.metrics?.content_score ?? '—'}/100
                 </span>
                 <span style={{ color: '#94a3b8', fontSize: '18px' }}>
                   {isOpen ? '▲' : '▼'}
