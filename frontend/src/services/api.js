@@ -2,7 +2,25 @@ import axios from 'axios';
 
 const API_BASE = '/api';
 
+const MOCK_USER = {
+  user_id: 'mock_user_001',
+  name: 'Nguyễn Minh Đức',
+  email: 'demo@interviewlab.test',
+};
+
 export const api = {
+  login: async (email, password) => {
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    if (!email || !password) throw new Error('Vui lòng nhập email và mật khẩu.');
+    return { ...MOCK_USER, email };
+  },
+
+  register: async (name, email, password) => {
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    if (!name || !email || password.length < 6) throw new Error('Mật khẩu cần có ít nhất 6 ký tự.');
+    return { ...MOCK_USER, name, email };
+  },
+
   // 1. Khởi tạo phiên phỏng vấn
   startSession: async (roleName, jdText = '') => {
     const res = await axios.post(`${API_BASE}/sessions/start`, {

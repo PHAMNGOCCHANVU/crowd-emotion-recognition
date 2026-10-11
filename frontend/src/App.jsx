@@ -1,21 +1,39 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import SetupPage from './pages/SetupPage';
 import InterviewRoom from './pages/InterviewRoom';
 import DashboardPage from './pages/DashboardPage';
+import HomePage from './pages/HomePage';
+import AuthPage from './pages/AuthPage';
 import { Mic2, Home, Video, History, UserRound, Sparkles, ChevronRight } from 'lucide-react';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('setup'); // 'setup' | 'interview' | 'dashboard'
+  const initialPath = window.location.pathname;
+  const [route, setRoute] = useState(initialPath);
+  const [currentPage, setCurrentPage] = useState(initialPath === '/results' ? 'dashboard' : 'setup'); // 'setup' | 'interview' | 'dashboard'
   const [sessionData, setSessionData] = useState(null);
   const [cameraStream, setCameraStream] = useState(null);
   const [recordedBlobs, setRecordedBlobs] = useState({});
   const [activeSection, setActiveSection] = useState('interview');
+  const [publicPage, setPublicPage] = useState(initialPath === '/register' ? 'register' : initialPath === '/login' ? 'login' : 'home');
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const handlePopState = () => setRoute(window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigate = (path) => {
+    window.history.pushState({}, '', path);
+    setRoute(path);
+  };
 
   const handleStartInterview = (session, stream) => {
     setSessionData(session);
     setCameraStream(stream);
     setCurrentPage('interview');
     setActiveSection('interview');
+    navigate('/interview');
   };
 
   const handleFinishInterview = (sessionId, blobsMap) => {
@@ -26,6 +44,7 @@ export default function App() {
     }
     setCurrentPage('dashboard');
     setActiveSection('interview');
+    navigate('/results');
   };
 
   const handleRestart = () => {
@@ -33,6 +52,7 @@ export default function App() {
     setRecordedBlobs({});
     setCurrentPage('setup');
     setActiveSection('interview');
+    navigate('/interview');
   };
 
   const handleNavigation = (section) => {
@@ -41,6 +61,9 @@ export default function App() {
       setCurrentPage('setup');
       setSessionData(null);
       setRecordedBlobs({});
+      navigate('/interview');
+    } else {
+      navigate(`/${section}`);
     }
   };
 
@@ -101,6 +124,11 @@ export default function App() {
     ['history', 'Lịch sử', History],
     ['profile', 'Hồ sơ', UserRound],
   ];
+
+  if (!user) {
+    if (route === '/' || route === '/home') return <><header className="app-header public-header"><div className="brand"><span className="brand-mark"><Mic2 size={18} /></span><span>InterviewLab</span></div><div className="public-actions"><button className="auth-link" onClick={() => { setPublicPage('login'); navigate('/login'); }}>Đăng nhập</button><button className="primary-button" onClick={() => { setPublicPage('register'); navigate('/register'); }}>Đăng ký</button></div></header><HomePage onLogin={() => { setPublicPage('login'); navigate('/login'); }} onRegister={() => { setPublicPage('register'); navigate('/register'); }} /></>;
+    return <><header className="app-header public-header"><div className="brand"><span className="brand-mark"><Mic2 size={18} /></span><span>InterviewLab</span></div><button className="auth-link" onClick={() => { setPublicPage('home'); navigate('/'); }}>Trang chủ</button></header><AuthPage mode={route === '/register' ? 'register' : 'login'} onModeChange={(mode) => { setPublicPage(mode); navigate(`/${mode}`); }} onAuthenticated={(nextUser) => { setUser(nextUser); setActiveSection('interview'); setCurrentPage('setup'); navigate('/interview'); }} /></>;
+  }
 
   return (
     <div className="app-shell">
