@@ -8,34 +8,62 @@ import { api } from '../services/api';
 export default function DashboardPage({ sessionId, blobsMap = {}, onRestart }) {
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState(null);
+  const [sessionStatus, setSessionStatus] = useState(null);
+  const [loadError, setLoadError] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
   const [selectedQuestionIdx, setSelectedQuestionIdx] = useState(0);
   const [videoCurrentTime, setVideoCurrentTime] = useState(0);
 
   const videoPlayerRef = useRef(null);
 
   useEffect(() => {
-    let interval = null;
+    let active = true;
+    let timeoutId;
 
-    const fetchResults = async () => {
+    if (sessionId.startsWith('mock_demo_')) {
+      setLoading(false);
+      setLoadError('Phiên demo không có kết quả phân tích từ Backend.');
+      return undefined;
+    }
+
+    const pollSession = async () => {
       try {
+        const status = await api.getSessionStatus(sessionId);
+        if (!active) return;
+        setSessionStatus(status);
+
         const data = await api.getSessionResults(sessionId);
+        if (!active) return;
         setResults(data);
-        setLoading(false);
+        setLoadError('');
+        setLoading(!status.is_fully_completed);
+
+        if (!status.is_fully_completed) {
+          timeoutId = window.setTimeout(pollSession, 2000);
+        }
       } catch (err) {
-        console.warn('Đang chờ kết quả xử lý từ Backend...', err);
+        if (!active) return;
+        console.warn('Không lấy được tiến độ/kết quả từ Backend:', err);
+        setLoadError('Chưa kết nối được Backend. Dashboard sẽ thử lại.');
+        setLoading(true);
+        timeoutId = window.setTimeout(pollSession, 4000);
       }
     };
 
-    fetchResults();
-    interval = setInterval(fetchResults, 3000); // Polling mỗi 3 giây
+    pollSession();
 
-    return () => clearInterval(interval);
-  }, [sessionId]);
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [sessionId, refreshKey]);
 
   const details = results?.details || [];
   const currentDetail = details[selectedQuestionIdx] || details[0] || {};
   const currentOrder = currentDetail.order_index || 1;
   const currentBlobUrl = blobsMap[currentOrder] || null;
+  const questionStatuses = sessionStatus?.questions || [];
+  const hasFailedAnswers = questionStatuses.some((question) => question.status === 'FAILED');
 
   const handleSeekSecond = (sec) => {
     if (videoPlayerRef.current) {
@@ -44,14 +72,11 @@ export default function DashboardPage({ sessionId, blobsMap = {}, onRestart }) {
     }
   };
 
-  const summary = results?.summary || {
-    overall_score: 85.0,
-    content_score_avg: 88.0,
-    confidence_score_avg: 82.0,
-    stress_score_avg: 18.0,
-    total_filler_words: 3,
-    final_verdict: 'Ứng viên có phản xạ nhanh, phong thái tự tin và biểu cảm tự nhiên.',
-  };
+  const reportReady = sessionStatus?.is_fully_completed
+    && questionStatuses.length > 0
+    && !hasFailedAnswers
+    && results?.summary;
+  const summary = results?.summary;
 
   return (
     <div style={{ maxWidth: '1100px', margin: '30px auto', padding: '0 20px' }}>
@@ -81,14 +106,51 @@ export default function DashboardPage({ sessionId, blobsMap = {}, onRestart }) {
         </button>
       </div>
 
-      {/* Thẻ điểm tổng quan */}
-      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '28px' }}>
-        <ScoreCard title="Điểm Tổng Hợp" score={summary.overall_score} color="#3b82f6" subtitle="60% Chuyên môn + 40% Phong thái" />
-        <ScoreCard title="Năng Lực Chuyên Môn" score={summary.content_score_avg} color="#10b981" subtitle="Đánh giá theo phương pháp STAR" />
-        <ScoreCard title="Chỉ Số Tự Tin (FER)" score={summary.confidence_score_avg} color="#38bdf8" subtitle="Tỷ lệ nét mặt tươi tắn & điềm đạm" />
-        <ScoreCard title="Mức Độ Căng Thẳng" score={summary.stress_score_avg} color="#f59e0b" subtitle="Nét mặt bối rối / nhăn nhó" />
-        <ScoreCard title="Từ Đệm Ngập Ngừng" score={summary.total_filler_words} isCount color="#e2e8f0" subtitle="'ừm', 'à', 'uhm' trong bài nói" />
-      </div>
+      {!reportReady && (
+        <section role="status" style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '18px 20px', marginBottom: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div>
+              <strong style={{ color: hasFailedAnswers ? '#fca5a5' : '#f8fafc' }}>
+                {hasFailedAnswers
+                  ? 'Một số câu trả lời chưa phân tích được'
+                  : loading
+                    ? 'Đang phân tích câu trả lời'
+                    : loadError || 'Chưa có kết quả phân tích'}
+              </strong>
+              {loading && <div style={{ color: '#94a3b8', fontSize: '13px', marginTop: '5px' }}>Dashboard tự cập nhật tiến độ.</div>}
+            </div>
+            {loadError && !sessionId.startsWith('mock_demo_') && (
+              <button onClick={() => { setLoading(true); setLoadError(''); setRefreshKey((key) => key + 1); }}>
+                Thử kết nối lại
+              </button>
+            )}
+          </div>
+          {questionStatuses.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '14px' }}>
+              {questionStatuses.map((question) => (
+                <span key={question.order_index} style={{ background: '#0f172a', borderRadius: '6px', padding: '6px 9px', color: '#cbd5e1', fontSize: '12px' }}>
+                  Câu {question.order_index}: {question.status}
+                </span>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {reportReady && (
+        <>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '18px' }}>
+            <ScoreCard title="Điểm Tổng Hợp" score={summary.overall_score} color="#3b82f6" subtitle="60% Chuyên môn + 40% Phong thái" />
+            <ScoreCard title="Năng Lực Chuyên Môn" score={summary.content_score_avg} color="#10b981" subtitle="Đánh giá theo phương pháp STAR" />
+            <ScoreCard title="Chỉ Số Tự Tin (FER)" score={summary.confidence_score_avg} color="#38bdf8" subtitle="Tỷ lệ nét mặt tươi tắn & điềm đạm" />
+            <ScoreCard title="Mức Độ Căng Thẳng" score={summary.stress_score_avg} color="#f59e0b" subtitle="Nét mặt bối rối / nhăn nhó" />
+            <ScoreCard title="Từ Đệm Ngập Ngừng" score={summary.total_filler_words} isCount color="#e2e8f0" subtitle="'ừm', 'à', 'uhm' trong bài nói" />
+          </div>
+          {summary.final_verdict && (
+            <p style={{ color: '#cbd5e1', lineHeight: 1.6, margin: '0 0 28px' }}>{summary.final_verdict}</p>
+          )}
+        </>
+      )}
 
       {/* Khu vực phát lại video đồng bộ với biểu đồ timeline */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', marginBottom: '32px' }}>
@@ -120,11 +182,17 @@ export default function DashboardPage({ sessionId, blobsMap = {}, onRestart }) {
             </div>
           </div>
 
-          <VideoPreview
-            videoBlobUrl={currentBlobUrl}
-            videoRef={videoPlayerRef}
-            onTimeUpdate={(t) => setVideoCurrentTime(t)}
-          />
+          {currentBlobUrl ? (
+            <VideoPreview
+              videoBlobUrl={currentBlobUrl}
+              videoRef={videoPlayerRef}
+              onTimeUpdate={(t) => setVideoCurrentTime(t)}
+            />
+          ) : (
+            <div style={{ minHeight: '220px', display: 'grid', placeItems: 'center', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#94a3b8', fontSize: '14px' }}>
+              Video chỉ xem lại được trong phiên trình duyệt đã ghi.
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
