@@ -1,10 +1,36 @@
 import os
-import traceback
+import logging
 from ..database import SessionLocal
 from ..models import InterviewSession, SessionDetail
 from .fer_service import analyze_interview_video_fer
 from .speech_service import transcribe_audio_whisper
 from .llm_service import evaluate_interview_answer_llm
+from .ai_contracts import ServiceError
+
+logger = logging.getLogger(__name__)
+
+
+def _update_summary(db, session):
+    """Only complete, non-mock answers contribute to session scores."""
+    if session is None:
+        return
+    details = db.query(SessionDetail).filter(SessionDetail.session_id == session.id).all()
+    completed = [d for d in details if d.status == "COMPLETED"
+                 and not (d.ai_feedback or {}).get("metadata", {}).get("is_mock", False)]
+    if completed:
+        count = len(completed)
+        avg_conf = sum(d.confidence_score or 0 for d in completed) / count
+        avg_stress = sum(d.stress_score or 0 for d in completed) / count
+        avg_content = sum(d.content_score or 0 for d in completed) / count
+        session.confidence_avg = round(avg_conf, 1)
+        session.stress_avg = round(avg_stress, 1)
+        session.overall_score = round(avg_content * 0.6 + avg_conf * 0.4, 1)
+    else:
+        session.confidence_avg = session.stress_avg = session.overall_score = 0.0
+    if details and all(d.status in {"COMPLETED", "FAILED"} for d in details):
+        session.status = "FAILED" if any(d.status == "FAILED" for d in details) else "COMPLETED"
+    else:
+        session.status = "IN_PROGRESS"
 
 
 def process_answer_in_background(
@@ -15,12 +41,14 @@ def process_answer_in_background(
     """
     Tác vụ chạy ngầm của FastAPI BackgroundTasks:
     1. Chạy FER trích xuất cảm xúc từ video.
-    2. Chạy Whisper API trích transcript & đếm từ đệm.
+    2. Chạy Groq Whisper API trích transcript & đếm từ đệm.
     3. Chạy Gemini LLM chấm điểm & sinh nhận xét.
     4. Cập nhật kết quả vào SQLite Database.
     5. Xóa bỏ file video tạm để giải phóng ổ cứng (Ephemeral Processing).
     """
     db = SessionLocal()
+    detail = None
+    session = None
     try:
         detail = (
             db.query(SessionDetail)
@@ -35,6 +63,8 @@ def process_answer_in_background(
             return
 
         session = db.query(InterviewSession).filter(InterviewSession.id == session_id).first()
+        if session is None:
+            raise ServiceError("missing_session", "Không tìm thấy phiên phỏng vấn.")
         role_name = session.role_name if session else "General"
 
         # 1. Trích xuất FER (Thị giác & Phong thái)
@@ -56,8 +86,15 @@ def process_answer_in_background(
             stress_score=stress_score,
             filler_words_count=filler_words_count,
             role_name=role_name,
+            emotion_metrics=fer_results,
+            speech_is_mock=speech_results.get("metadata", {}).get("is_mock", False),
         )
-        content_score = llm_feedback.get("content_score", 80.0)
+        is_mock = (speech_results.get("metadata", {}).get("is_mock", False)
+                   or llm_feedback.get("metadata", {}).get("is_mock", False))
+        content_score = llm_feedback["content_score"] if not is_mock else None
+        # Preserve word timestamps and provenance without a database migration.
+        llm_feedback["speech_metadata"] = speech_results.get("metadata", {})
+        llm_feedback["word_timestamps"] = speech_results.get("words", [])
 
         # 4. Cập nhật SessionDetail
         detail.transcript = transcript
@@ -67,33 +104,28 @@ def process_answer_in_background(
         detail.content_score = content_score
         detail.emotion_timeline = emotion_timeline
         detail.ai_feedback = llm_feedback
-        detail.status = "COMPLETED"
+        detail.status = "FAILED" if is_mock else "COMPLETED"
 
         # 5. Cập nhật lại điểm trung bình của InterviewSession
-        all_details = db.query(SessionDetail).filter(SessionDetail.session_id == session_id).all()
-        completed = [d for d in all_details if d.status == "COMPLETED"]
-        if completed:
-            avg_conf = sum(d.confidence_score for d in completed) / len(completed)
-            avg_stress = sum(d.stress_score for d in completed) / len(completed)
-            avg_content = sum(d.content_score for d in completed) / len(completed)
-            overall = round(avg_content * 0.6 + avg_conf * 0.4, 1)
-
-            session.confidence_avg = round(avg_conf, 1)
-            session.stress_avg = round(avg_stress, 1)
-            session.overall_score = overall
-
-            if len(completed) == len(all_details):
-                session.status = "COMPLETED"
+        _update_summary(db, session)
 
         db.commit()
         print(f"[Pipeline Worker] Hoàn thành phân tích câu {order_index} cho session {session_id}")
 
     except Exception as e:
         db.rollback()
-        print(f"[Pipeline Worker Error] Lỗi xử lý ngầm: {e}")
-        traceback.print_exc()
+        code = e.code if isinstance(e, ServiceError) else "pipeline_error"
+        logger.warning("Interview pipeline failed (%s)", code)
         if detail:
             detail.status = "FAILED"
+            detail.content_score = None
+            detail.ai_feedback = {
+                "content_critique": "Chưa thể đánh giá câu trả lời. Hãy kiểm tra cấu hình hoặc thử lại.",
+                "delivery_critique": "Chưa có nhận xét hoàn chỉnh.",
+                "suggested_answer": "",
+                "metadata": {"is_mock": False, "error_code": code},
+            }
+            _update_summary(db, session)
             db.commit()
     finally:
         db.close()

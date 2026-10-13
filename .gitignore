@@ -89,3 +89,14 @@ runs/
 
 # --- Tài liệu nội bộ (User-specified) ---
 docs/
+
+# Member B local tests and temporary audio outputs
+.pytest_cache/
+.tmp/
+artifacts/
+.env.*
+!.env.example
+!tests/fixtures/interview_answer_en.webm
+!tests/fixtures/answer_vi_01.webm
+!tests/fixtures/answer_vi_02.webm
+!tests/fixtures/answer_vi_03.webm

@@ -177,7 +177,8 @@ def get_session_results(session_id: str, db: Session = Depends(get_db)):
 
     for d in details:
         total_filler += d.filler_words_count or 0
-        content_scores.append(d.content_score or 0.0)
+        if d.status == "COMPLETED" and not (d.ai_feedback or {}).get("metadata", {}).get("is_mock", False):
+            content_scores.append(d.content_score or 0.0)
 
         result_details.append(
             QuestionResultDetail(
@@ -198,14 +199,14 @@ def get_session_results(session_id: str, db: Session = Depends(get_db)):
     avg_content = sum(content_scores) / len(content_scores) if content_scores else 0.0
 
     summary = SessionSummary(
-        overall_score=session.overall_score or round(avg_content * 0.6 + (session.confidence_avg or 0) * 0.4, 1),
+        overall_score=session.overall_score or 0.0,
         content_score_avg=round(avg_content, 1),
         confidence_score_avg=session.confidence_avg or 0.0,
         stress_score_avg=session.stress_avg or 0.0,
         total_filler_words=total_filler,
         final_verdict=(
-            "Ứng viên có phản xạ tốt, phong thái tự tin và biểu cảm tự nhiên. "
-            "Nên tiếp tục phát huy sự điềm tĩnh và giảm bớt các từ đệm khi trình bày chuyên môn."
+            "Xem nhận xét AI theo từng câu; điểm tổng chỉ tính các câu đã phân tích thành công."
+            if content_scores else "Chưa có câu trả lời được đánh giá thành công."
         ),
     )
 

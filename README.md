@@ -1,4 +1,6 @@
 # 🎙️ AI Mock Interview Platform — Nền Tảng Luyện Phỏng Vấn Thử Thông Minh Đa Phương Thức
+
+Task05 của thành viên B: [cài đặt, hợp đồng Speech/LLM và kiểm thử](backend/SPEECH_LLM.md).
 > **Đánh giá toàn diện Năng lực Chuyên môn (Verbal) & Phong thái Tự tin (Non-verbal)**  
 > *Dự án phát triển ứng dụng thực tiễn từ Codebase Nhận diện Cảm xúc (Emotion Recognition).*
 
@@ -10,7 +12,7 @@ Trong tuyển dụng hiện đại, nhà tuyển dụng không chỉ đánh giá
 
 **Hệ thống AI Mock Interview giải quyết trọn vẹn bài toán này bằng cách kết hợp 3 trụ cột AI đa phương thức:**
 1. **👁️ Thị giác & Phong thái (FER Engine — Kế thừa từ Codebase):** Sử dụng mô hình mạng nơ-ron **ResNet-18** bóc tách biểu cảm vi mô theo từng giây video câu trả lời, tính toán **Chỉ số Tự tin (Confidence Score)** và **Mức độ Căng thẳng (Stress Score)**.
-2. **🎙️ Giọng nói & Ngôn từ (Speech Engine — Whisper API):** Bóc băng câu trả lời thành văn bản (Transcript) kèm mốc thời gian, đếm chính xác số lượng từ đệm ngập ngừng ("ừm", "à", "uhm").
+2. **🎙️ Giọng nói & Ngôn từ (Speech Engine — Groq Whisper Large V3 Turbo API):** Bóc băng câu trả lời thành văn bản (Transcript) kèm mốc thời gian, đếm chính xác số lượng từ đệm ngập ngừng ("ừm", "à", "uhm").
 3. **🧠 Chuyên môn & Tư duy (Cognitive Engine — Google Gemini Flash API):** Phân tích nội dung câu trả lời theo phương pháp **STAR (Situation - Task - Action - Result)**, đưa ra nhận xét chuyên sâu và gợi ý câu trả lời mẫu tối ưu.
 4. **⚡ Lưu trữ Tinh gọn (Ephemeral Storage & Client Blob Replay):** Server **không lưu trữ vĩnh viễn 1 byte video nào** (file tạm tự hủy ngay sau khi trích xuất AI). Ứng viên phát lại video trực tiếp từ bộ nhớ RAM trình duyệt (`Blob URL`) và có thể **nhấp vào mốc thời gian trên biểu đồ cảm xúc để nhảy ngay đến giây tương ứng trên video**.
 
@@ -27,7 +29,7 @@ d:\emotion_recognition\
 │   ├── database.py                  ← Kết nối SQLite (interview.db) & Session
 │   ├── models.py                    ← SQLAlchemy ORM models (Users, Sessions, Details)
 │   ├── schemas.py                   ← Pydantic schemas (Request / Response DTO)
-│   ├── requirements.txt             ← Thư viện backend (fastapi, uvicorn, openai, google-genai...)
+│   ├── requirements.txt             ← Thư viện backend (fastapi, uvicorn, groq, google-genai...)
 │   ├── 📂 api/                      ← Router endpoints (/sessions, /questions)
 │   └── 📂 services/                 ← fer_service.py, speech_service.py, llm_service.py, pipeline_worker.py
 │
