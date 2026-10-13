@@ -12,62 +12,64 @@ if sys.stdout.encoding != 'utf-8':
     except Exception:
         pass
 
-# 4 nhãn cảm xúc chuẩn hóa của dự án
-TARGET_CLASSES = ['Happy', 'Normal', 'Sad', 'Surprised']
-
-# Chuẩn chuẩn hóa ImageNet tương thích ResNet-18
-IMAGENET_MEAN = [0.485, 0.456, 0.406]
-IMAGENET_STD = [0.229, 0.224, 0.225]
+# 6 nhãn cảm xúc chuẩn hóa của dự án
+TARGET_CLASSES = ['Contempt', 'Fear', 'Happy', 'Normal', 'Sad', 'Surprised']
 
 
-def get_transforms(input_size=224, is_training=True):
+def get_transforms(input_size=48, is_training=True):
     """
-    Tạo pipeline tiền xử lý ảnh và Data Augmentation thích nghi với CCTV.
-    - Ban ngày/ban đêm, ánh sáng đèn: ColorJitter (brightness, contrast).
-    - Mờ do người di chuyển nhanh: GaussianBlur.
-    - Góc nhìn đa dạng: RandomHorizontalFlip, RandomCrop.
+    Tạo pipeline tiền xử lý ảnh Grayscale (1 kênh) và Data Augmentation mạnh
+    nhằm đạt độ chính xác cao (>= 70%) khi huấn luyện CustomResNet18 from scratch.
     """
     if is_training:
+        scale_size = int(input_size * 1.15)
         return transforms.Compose([
-            transforms.Resize((int(input_size * 1.15), int(input_size * 1.15))),
+            transforms.Grayscale(num_output_channels=1),
+            transforms.Resize((scale_size, scale_size)),
             transforms.RandomCrop((input_size, input_size)),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2),
-            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0)),
+            transforms.RandomRotation(degrees=10),
+            transforms.RandomAffine(degrees=0, translate=(0.08, 0.08), scale=(0.92, 1.08)),
+            transforms.ColorJitter(brightness=0.25, contrast=0.25),
             transforms.ToTensor(),
-            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD)
+            transforms.Normalize(mean=[0.5], std=[0.5]),
+            transforms.RandomErasing(p=0.2, scale=(0.02, 0.15), value=0.0)
         ])
     else:
         return transforms.Compose([
+            transforms.Grayscale(num_output_channels=1),
             transforms.Resize((input_size, input_size)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD)
+            transforms.Normalize(mean=[0.5], std=[0.5])
         ])
 
 
-def create_dataloaders(data_dir='Dataset', batch_size=32, input_size=224, num_workers=0):
+def find_dataset_path(candidate_dir='Data/Dataset'):
+    if os.path.exists(os.path.join(candidate_dir, 'Train')) and os.path.exists(os.path.join(candidate_dir, 'Validation')):
+        return candidate_dir
+    alt_candidates = ['Data/Dataset', 'Dataset', '../Data/Dataset']
+    for c in alt_candidates:
+        if os.path.exists(os.path.join(c, 'Train')) and os.path.exists(os.path.join(c, 'Validation')):
+            return c
+    return candidate_dir
+
+
+def create_dataloaders(data_dir='Data/Dataset', batch_size=64, input_size=48, num_workers=0):
     """
     Nạp dữ liệu từ thư mục Dataset theo cấu trúc:
-    Dataset/
-    ├── Train/{Happy, Normal, Sad, Surprised}/
-    └── Validation/{Happy, Normal, Sad, Surprised}/
+    Data/Dataset/
+    ├── Train/{Contempt, Fear, Happy, Normal, Sad, Surprised}/
+    └── Validation/{Contempt, Fear, Happy, Normal, Sad, Surprised}/
     """
+    data_dir = find_dataset_path(data_dir)
     train_path = os.path.join(data_dir, 'Train')
     val_path = os.path.join(data_dir, 'Validation')
 
-    # Tự động tìm thư mục Dataset nếu đường dẫn mặc định không tồn tại
     if not os.path.exists(train_path) or not os.path.exists(val_path):
-        if os.path.exists('Data/Dataset/Train') and os.path.exists('Data/Dataset/Validation'):
-            data_dir = 'Data/Dataset'
-            train_path = os.path.join(data_dir, 'Train')
-            val_path = os.path.join(data_dir, 'Validation')
-        else:
-            raise FileNotFoundError(
-                f"Không tìm thấy thư mục Train/Validation tại '{data_dir}' hoặc 'Data/Dataset'. "
-                "Hãy đảm bảo Team Data đã tạo đúng cấu trúc thư mục."
-            )
-
-
+        raise FileNotFoundError(
+            f"Không tìm thấy thư mục Train/Validation tại '{data_dir}'. "
+            "Hãy đảm bảo thư mục dữ liệu đã sẵn sàng."
+        )
 
     train_dataset = datasets.ImageFolder(train_path, transform=get_transforms(input_size, is_training=True))
     val_dataset = datasets.ImageFolder(val_path, transform=get_transforms(input_size, is_training=False))
@@ -77,19 +79,19 @@ def create_dataloaders(data_dir='Dataset', batch_size=32, input_size=224, num_wo
         num_workers=num_workers, pin_memory=torch.cuda.is_available()
     )
     val_loader = DataLoader(
-        val_dataset, batch_size=batch_size * 2, shuffle=False,
+        val_dataset, batch_size=batch_size, shuffle=False,
         num_workers=num_workers, pin_memory=torch.cuda.is_available()
     )
 
-    print(f"[INFO] Loaded Dataset: {train_dataset.classes}")
+    print(f"[INFO] Loaded Dataset Classes: {train_dataset.classes}")
     print(f"[INFO] Train samples: {len(train_dataset)} | Val samples: {len(val_dataset)}")
 
     return train_loader, val_loader, train_dataset.classes
 
 
-def create_dummy_dataset(base_dir='Dataset_Dummy', samples_per_class=5):
+def create_dummy_dataset(base_dir='Dataset_Dummy', samples_per_class=4, img_size=48):
     """
-    Tạo dữ liệu mẫu nhỏ (dummy images) để test pipeline training trước khi nhận dữ liệu thật.
+    Tạo dữ liệu mẫu nhỏ (dummy grayscale images) để kiểm tra pipeline.
     """
     for split in ['Train', 'Validation']:
         for cls_name in TARGET_CLASSES:
@@ -98,26 +100,22 @@ def create_dummy_dataset(base_dir='Dataset_Dummy', samples_per_class=5):
             for i in range(samples_per_class):
                 img_path = os.path.join(cls_dir, f"sample_{i}.jpg")
                 if not os.path.exists(img_path):
-                    # Tạo ảnh ngẫu nhiên RGB
-                    dummy_img = Image.new('RGB', (112, 112), color=(i * 40 % 255, 100, 150))
+                    dummy_img = Image.new('L', (img_size, img_size), color=(i * 40 % 255))
                     dummy_img.save(img_path)
     print(f"[INFO] Đã tạo tập dummy dataset tại: {base_dir}")
 
 
 if __name__ == '__main__':
     print("--- Test DataLoader ---")
-    test_dir = 'Dataset_Dummy'
-    create_dummy_dataset(test_dir, samples_per_class=4)
-
+    # Kiểm tra trực tiếp trên Data/Dataset thật
     train_loader, val_loader, classes = create_dataloaders(
-        data_dir=test_dir, batch_size=4, input_size=112
+        data_dir='Data/Dataset', batch_size=8, input_size=48
     )
 
-    # Lấy thử 1 batch
     images, labels = next(iter(train_loader))
     print(f"Batch images shape: {images.shape}")
     print(f"Batch labels shape: {labels.shape}")
     print(f"Batch labels:       {[classes[lbl.item()] for lbl in labels]}")
 
-    assert images.shape == (4, 3, 112, 112), f"Unexpected shape {images.shape}"
+    assert images.shape == (8, 1, 48, 48), f"Unexpected shape {images.shape}"
     print("[OK] DataLoader test PASSED!")

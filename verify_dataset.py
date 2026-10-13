@@ -10,7 +10,8 @@ if sys.stdout.encoding != 'utf-8':
     except Exception:
         pass
 
-CLASSES = ['Happy', 'Normal', 'Sad', 'Surprised']
+# 6 nhãn cảm xúc chuẩn hóa (Khớp cấu trúc thư mục Data/Dataset)
+CLASSES = ['Contempt', 'Fear', 'Happy', 'Normal', 'Sad', 'Surprised']
 
 
 def find_dataset_dir():
@@ -47,7 +48,6 @@ def verify_dataset(data_dir=None, sample_check_count=50):
                 stats[split][cls] = 0
                 continue
 
-            # Đếm nhanh số lượng file
             all_files = [f for f in os.listdir(cls_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
             stats[split][cls] = len(all_files)
 

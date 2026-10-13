@@ -65,3 +65,16 @@ class SessionResultResponse(BaseModel):
     role_name: str
     summary: SessionSummary
     details: List[QuestionResultDetail]
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., description="Nội dung câu hỏi của ứng viên gửi cho AI Coach")
+
+
+class ChatResponse(BaseModel):
+    session_id: str
+    response: str
+    tools_used: List[str] = []
+    is_mock: bool = False
+    timestamp: str
+

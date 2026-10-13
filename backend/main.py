@@ -12,6 +12,7 @@ if str(ROOT_DIR) not in sys.path:
 from backend.database import engine, Base
 from backend.api.sessions import router as sessions_router
 from backend.api.questions import router as questions_router
+from backend.api.chatbot import router as chatbot_router
 
 # Tự động tạo bảng SQLite nếu chưa có
 Base.metadata.create_all(bind=engine)
@@ -33,6 +34,8 @@ app.add_middleware(
 
 app.include_router(sessions_router)
 app.include_router(questions_router)
+app.include_router(chatbot_router)
+
 
 
 @app.get("/")
