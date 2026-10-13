@@ -11,7 +11,7 @@ export default function FeedbackAccordion({ details = [], activeIndex = 0, onSel
   if (!details || details.length === 0) return null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {details.map((item, idx) => {
         const isOpen = selected === idx;
         const feedback = item.ai_feedback || {};
@@ -20,9 +20,9 @@ export default function FeedbackAccordion({ details = [], activeIndex = 0, onSel
           <div
             key={item.order_index}
             style={{
-              background: '#1e293b',
+              background: '#fff',
               borderRadius: '12px',
-              border: isOpen ? '1px solid #3b82f6' : '1px solid #334155',
+              border: isOpen ? '1px solid #7da9d6' : '1px solid #e5eaf1',
               overflow: 'hidden',
               transition: 'border-color 0.2s',
             }}
@@ -36,12 +36,12 @@ export default function FeedbackAccordion({ details = [], activeIndex = 0, onSel
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 cursor: 'pointer',
-                background: isOpen ? '#1e293b' : '#0f172a',
+                background: isOpen ? '#f8fbff' : '#fff',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{
-                  background: isOpen ? '#3b82f6' : '#334155',
+                  background: isOpen ? '#1e5b9e' : '#dbe4ef',
                   color: '#fff',
                   width: '28px',
                   height: '28px',
@@ -54,13 +54,13 @@ export default function FeedbackAccordion({ details = [], activeIndex = 0, onSel
                 }}>
                   {item.order_index}
                 </span>
-                <span style={{ fontSize: '15px', fontWeight: 600, color: '#f8fafc' }}>
+                <span style={{ fontSize: '15px', fontWeight: 650, color: '#1b2b43' }}>
                   {item.question_text}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <span style={{ fontSize: '13px', color: '#38bdf8' }}>
-                  Điểm: {item.metrics?.content_score ?? '—'}/100
+                <span style={{ fontSize: '13px', color: '#356ca8', fontWeight: 700 }}>
+                Điểm: {item.metrics?.content_score ?? '—'}/100
                 </span>
                 <span style={{ color: '#94a3b8', fontSize: '18px' }}>
                   {isOpen ? '▲' : '▼'}
@@ -76,7 +76,7 @@ export default function FeedbackAccordion({ details = [], activeIndex = 0, onSel
                   <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 600 }}>
                     🎙️ BẢN BÓC BĂNG CÂU TRẢ LỜI (WHISPER STT)
                   </div>
-                  <div style={{ background: '#0f172a', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', lineHeight: 1.6, color: '#cbd5e1' }}>
+                  <div style={{ background: '#f5f7fa', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', lineHeight: 1.6, color: '#46566b' }}>
                     "{item.transcript || 'Chưa có bản bóc băng'}"
                   </div>
                   {item.filler_words_count > 0 && (
@@ -88,20 +88,20 @@ export default function FeedbackAccordion({ details = [], activeIndex = 0, onSel
 
                 {/* Nhận xét chuyên môn & Phong thái */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div style={{ background: '#0f172a', padding: '14px', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
-                    <div style={{ fontSize: '12px', color: '#60a5fa', fontWeight: 600, marginBottom: '6px' }}>
+                  <div style={{ background: '#f7fbff', padding: '14px', borderRadius: '8px', borderLeft: '3px solid #4d8bc5' }}>
+                    <div style={{ fontSize: '12px', color: '#356ca8', fontWeight: 700, marginBottom: '6px' }}>
                       🧠 ĐÁNH GIÁ CHUYÊN MÔN (STAR)
                     </div>
-                    <div style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: '13px', color: '#46566b', lineHeight: 1.5 }}>
                       {feedback.content_critique || 'Đang cập nhật...'}
                     </div>
                   </div>
 
-                  <div style={{ background: '#0f172a', padding: '14px', borderRadius: '8px', borderLeft: '4px solid #22c55e' }}>
-                    <div style={{ fontSize: '12px', color: '#4ade80', fontWeight: 600, marginBottom: '6px' }}>
+                  <div style={{ background: '#f5fbf7', padding: '14px', borderRadius: '8px', borderLeft: '3px solid #4b9a6a' }}>
+                    <div style={{ fontSize: '12px', color: '#397a55', fontWeight: 700, marginBottom: '6px' }}>
                       👁️ ĐÁNH GIÁ PHONG THÁI & BIỂU CẢM (FER)
                     </div>
-                    <div style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: '13px', color: '#46566b', lineHeight: 1.5 }}>
                       {feedback.delivery_critique || 'Đang cập nhật...'}
                     </div>
                   </div>
@@ -109,11 +109,11 @@ export default function FeedbackAccordion({ details = [], activeIndex = 0, onSel
 
                 {/* Gợi ý câu trả lời mẫu */}
                 {feedback.suggested_answer && (
-                  <div style={{ background: '#14291f', padding: '14px', borderRadius: '8px', borderLeft: '4px solid #10b981' }}>
+                  <div style={{ background: '#f1faf5', padding: '14px', borderRadius: '8px', borderLeft: '3px solid #4b9a6a' }}>
                     <div style={{ fontSize: '12px', color: '#34d399', fontWeight: 600, marginBottom: '6px' }}>
                       💡 GỢI Ý CÂU TRẢ LỜI MẪU TỐI ƯU
                     </div>
-                    <div style={{ fontSize: '13px', color: '#d1fae5', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: '13px', color: '#356047', lineHeight: 1.5 }}>
                       {feedback.suggested_answer}
                     </div>
                   </div>
