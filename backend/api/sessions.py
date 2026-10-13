@@ -98,16 +98,20 @@ async def upload_question_answer(
     if not detail:
         raise HTTPException(status_code=404, detail="Không tìm thấy câu hỏi tương ứng")
 
-    # Tạo file tạm trong thư mục temp của hệ thống
-    temp_dir = tempfile.gettempdir()
+    import aiofiles
+
+    # Ép buộc dùng thư mục /tmp/ theo đúng yêu cầu đề bài (hỗ trợ cả Linux/Docker sau này deploy cloud)
+    temp_dir = "/tmp/"
+    os.makedirs(temp_dir, exist_ok=True)
+    
     file_ext = os.path.splitext(video_file.filename)[1] or ".webm"
     temp_filename = f"interview_{session_id}_q{order_index}{file_ext}"
     temp_file_path = os.path.join(temp_dir, temp_filename)
 
-    # Lưu nhanh file nhị phân vào ổ đĩa tạm
-    content = await video_file.read()
-    with open(temp_file_path, "wb") as f:
-        f.write(content)
+    # Dùng aiofiles để ghi file bất đồng bộ (giúp luồng API không bị nghẽn, đảm bảo < 800ms)
+    async with aiofiles.open(temp_file_path, "wb") as f:
+        content = await video_file.read()
+        await f.write(content)
 
     # Đánh dấu trạng thái PROCESSING
     detail.status = "PROCESSING"
