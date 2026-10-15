@@ -30,8 +30,10 @@ d:\emotion_recognition\
 │   ├── models.py                    ← SQLAlchemy ORM models (Users, Sessions, Details)
 │   ├── schemas.py                   ← Pydantic schemas (Request / Response DTO)
 │   ├── requirements.txt             ← Thư viện backend (fastapi, uvicorn, groq, google-genai...)
-│   ├── 📂 api/                      ← Router endpoints (/sessions, /questions)
-│   └── 📂 services/                 ← fer_service.py, speech_service.py, llm_service.py, pipeline_worker.py
+│   ├── 📂 ai_core/                  ← Phân tích cảm xúc và chỉ số phỏng vấn
+│   ├── 📂 api/                      ← Router endpoints (sessions, questions, chatbot)
+│   ├── 📂 services/                 ← FER, Speech, LLM, pipeline và storage
+│   └── 📂 tests/                    ← Kiểm thử service, pipeline và speech/LLM
 │
 ├── 📂 frontend/                     ← FRONTEND REACT + VITE (SPA)
 │   ├── package.json                 ← Dependencies: react, axios, lucide-react
@@ -44,25 +46,7 @@ d:\emotion_recognition\
 │       ├── 📂 components/           ← VideoPreview.jsx, EmotionChart.jsx, ScoreCard.jsx, FeedbackAccordion.jsx
 │       └── 📂 services/api.js       ← Axios client gọi REST API Backend
 │
-├── 📂 ai_core/                      ← KẾ THỪA TRỰC TIẾP TỪ CODEBASE HIỆN TẠI
-│   ├── crowd_emotion_model.py       ← Mô hình ResNet-18 nhận diện 4 nhãn (Happy, Normal, Sad, Surprised)
-│   ├── face_detector.py             ← Phát hiện khuôn mặt chính diện webcam
-│   └── interview_analytics.py       ← Thuật toán tính Confidence, Stress Score & Emotion Timeline
-│
-├── 📂 weights/                      ← TRỌNG SỐ MÔ HÌNH
-│   ├── crowd_emotion_resnet18.pt    ← Trọng số mô hình cảm xúc 4 nhãn
-│   └── yolov8n-face.pt              ← Trọng số mô hình detector
-│
-├── 📂 legacy_crowd/                 ← LƯU TRỮ TOÀN BỘ CODE GIÁM SÁT CCTV CŨ (GIỮ LỊCH SỬ)
-│   ├── app.py                       ← Streamlit dashboard cũ
-│   ├── video_stream.py              ← Pipeline đọc video cũ
-│   ├── alert_engine.py              ← Bộ cảnh báo an ninh cũ
-│   ├── test_pipeline.py             ← Script test cũ
-│   └── live_emotion_recognition.py  ← Code demo cũ của tác giả
-│
-└── 📂 docs/                         ← TÀI LIỆU DỰ ÁN
-    ├── SRS.md                       ← Bản đặc tả yêu cầu phần mềm hoàn thiện
-    └── implement_plan.md            ← Kế hoạch thực thi kỹ thuật & API specs
+├── 📂 docker-compose.yml             ← PostgreSQL + Backend + Frontend
 ```
 
 ---
@@ -73,12 +57,20 @@ d:\emotion_recognition\
 Dự án sử dụng Python 3.10 – 3.12 và Node.js $\ge 18$:
 
 ```powershell
-# 1. Kích hoạt môi trường ảo Python
-.venv\Scripts\activate
+# 1. Di chuyển vào thư mục backend
+cd backend
 
-# 2. Cài đặt thư viện Python cho Backend & AI Core
-pip install -r backend/requirements.txt
+# 2. Tạo môi trường ảo Python riêng cho backend
+python -m venv .venv
+
+# 3. Kích hoạt môi trường ảo Python (Windows PowerShell)
+.\.venv\Scripts\Activate.ps1
+
+# 4. Cài đặt thư viện Python cho Backend & AI Core
+pip install -r requirements.txt
 ```
+
+Môi trường Python nằm tại `backend/.venv`, không nằm ở thư mục gốc của dự án.
 
 ---
 
@@ -89,7 +81,9 @@ pip install -r backend/requirements.txt
 #### Terminal 1: Khởi chạy Backend FastAPI
 ```powershell
 # Từ thư mục gốc d:\emotion_recognition:
-python -m uvicorn backend.main:app --reload --port 8000
+cd backend
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn main:app --reload --port 8000
 ```
 * **Tài liệu API tương tác (Swagger UI):** Mở trình duyệt tại **`http://localhost:8000/docs`**
 * Server tự động tạo file cơ sở dữ liệu SQLite tại `backend/interview.db`.
@@ -113,16 +107,27 @@ npm run dev
 
 ---
 
-### 3.3. Cấu hình & Ánh xạ SQLAlchemy sang PostgreSQL (Production / Cloud Database)
+### 3.3. Chạy toàn bộ hệ thống bằng Docker Compose (Phục vụ deploy lên server)
 
-Mặc định hệ thống sử dụng SQLite cục bộ (`backend/interview.db`) để chạy thử nghiệm nhanh không cần cài đặt. Khi triển khai Production hoặc triển khai Cloud (Render, Railway, Supabase, Neon), bạn thực hiện ánh xạ các model SQLAlchemy sang **PostgreSQL** theo các bước sau:
+Docker Compose khởi chạy PostgreSQL 16, backend FastAPI và frontend Nginx:
 
-#### Bước 1: Cài đặt Driver PostgreSQL
 ```powershell
-pip install psycopg2-binary
+docker compose up --build
 ```
 
-#### Bước 2: Thiết lập Biến môi trường kết nối (`DATABASE_URL`)
+Sau khi các container khởi động:
+
+* **Giao diện Người dùng:** `http://localhost`
+* **Backend API / Swagger:** `http://localhost:8000/docs`
+* **PostgreSQL:** `localhost:5432` (database `interview_db`, user `interview_user`)
+
+Dừng hệ thống bằng `Ctrl+C`, hoặc chạy `docker compose down`. Dữ liệu PostgreSQL được giữ trong volume `postgres_data`.
+
+### 3.4. Cấu hình PostgreSQL cho môi trường local hoặc production
+
+Mặc định, khi không có `DATABASE_URL`, hệ thống sử dụng SQLite cục bộ tại `backend/interview.db`. Khi dùng PostgreSQL, đặt biến môi trường `DATABASE_URL` trước khi khởi động backend. Driver PostgreSQL đã có trong `backend/requirements.txt`.
+
+#### Thiết lập biến môi trường kết nối (`DATABASE_URL`)
 Chuỗi kết nối chuẩn: `postgresql://<username>:<password>@<host>:<port>/<database_name>`
 
 * **Trên Windows PowerShell:**
@@ -138,43 +143,21 @@ Chuỗi kết nối chuẩn: `postgresql://<username>:<password>@<host>:<port>/<
   DATABASE_URL=postgresql://postgres:password123@localhost:5432/interview_db
   ```
 
-#### Bước 3: Lệnh Thực hiện Ánh xạ Schema sang PostgreSQL
-Bạn có thể chọn một trong các cách sau:
+#### Ánh xạ ORM bằng câu lệnh CLI
 
-* **Cách 1 — Chạy lệnh Python ánh xạ trực tiếp (Khuyên dùng):**
-  ```powershell
-  python -c "from backend.database import engine, Base; from backend.models import *; Base.metadata.create_all(bind=engine); print('✅ Đã ánh xạ thành công các bảng sang PostgreSQL!')"
-  ```
-
-* **Cách 2 — Khởi động Server (Tự động ánh xạ khi Startup):**
-  ```powershell
-  python -m uvicorn backend.main:app --reload --port 8000
-  ```
-  *(Khi khởi động, `Base.metadata.create_all(bind=engine)` trong `backend/main.py` sẽ tự động tạo đủ 3 bảng `users`, `interview_sessions`, `session_details` trên PostgreSQL nếu chưa có).*
-
-* **Cách 3 — Sử dụng Alembic Migration (Quản lý phiên bản CSDL):**
-  ```powershell
-  # Tạo migration script tự động:
-  alembic revision --autogenerate -m "Init postgres schema"
-
-  # Đẩy schema lên PostgreSQL:
-  alembic upgrade head
-  ```
-
----
-
-### 3.4. Khởi chạy Hệ thống CŨ: Dashboard Streamlit Giám sát CCTV
-
-Nếu bạn muốn mở lại giao diện giám sát đám đông CCTV cũ hoặc chạy kịch bản kiểm thử đo FPS:
+Sau khi đã cấu hình `DATABASE_URL` (hoặc để hệ thống dùng SQLite mặc định), chạy script khởi tạo từ thư mục gốc dự án:
 
 ```powershell
-# Khởi chạy giao diện Streamlit CCTV:
-streamlit run legacy_crowd/app.py
+# Nếu terminal đang ở thư mục backend thì quay về thư mục gốc
+cd ..
 
-# Chạy kịch bản kiểm thử đo đạc hiệu năng FPS:
-python legacy_crowd/test_pipeline.py
+# Môi trường đã kích hoạt là backend/.venv
+python backend/init_db.py
 ```
-*(Pipeline CCTV đạt tốc độ xử lý **23.6 FPS** trên CPU).*
+
+Script sẽ nạp toàn bộ SQLAlchemy models, tạo các bảng còn thiếu và kiểm tra cột `video_url` trong bảng `session_details`. Có thể chạy lại lệnh này an toàn khi cần đồng bộ schema hiện tại.
+
+Khi backend khởi động, `Base.metadata.create_all(bind=engine)` tự động tạo các bảng còn thiếu. Với môi trường production, nên dùng migration tool thay vì dựa vào việc tự tạo bảng lúc startup.
 
 ---
 
@@ -187,17 +170,7 @@ python legacy_crowd/test_pipeline.py
 | **`GET`** | `/api/sessions/{session_id}/status` | Polling kiểm tra tiến độ xử lý ngầm của các câu hỏi (`PROCESSING` / `COMPLETED`). |
 | **`GET`** | `/api/sessions/{session_id}/results` | Lấy toàn bộ kết quả phân tích đa phương thức (thẻ điểm, transcript, emotion timeline, nhận xét Gemini). |
 | **`GET`** | `/api/questions/roles` | Lấy danh sách các ngành nghề phỏng vấn mẫu có sẵn. |
-
----
-
-## 👥 5. Phân công Công việc Nhóm (Sprint 14 Ngày)
-
-Dự án áp dụng nguyên tắc **Decoupled Architecture & API-Contract First** cho nhóm 5 thành viên (A, B, C, D, E):
-
-| Thành viên | Vai trò Kỹ thuật | Trách nhiệm Tuần 1 | Trọng tâm Tuần 2 |
-| :--- | :--- | :--- | :--- |
-| **Thành viên A** | AI Lead - FER Pipeline | Tái cấu trúc codebase cũ sang `ai_core/`, viết `backend/services/fer_service.py` | Tối ưu hóa FPS, trích xuất Confidence & Stress Score đồng bộ Timeline |
-| **Thành viên B** | AI Speech & LLM | Tích hợp Whisper STT (`speech_service.py`) & Gemini API (`llm_service.py`) | Tinh chỉnh Prompt chấm STAR, ghép nối kết quả đa phương thức |
-| **Thành viên C** | Backend Lead | Xây dựng FastAPI Core, Database SQLite, In-process `BackgroundTasks` | Ghép nối 3 service vào BackgroundTasks, cơ chế tự hủy file tạm `/tmp/` |
-| **Thành viên D** | Frontend Lead - Phòng PV | Xây dựng `SetupPage.jsx`, `InterviewRoom.jsx`, ghi hình `MediaRecorder` | Quản lý bộ nhớ RAM `Blob URL`, nối API nộp câu trả lời cuốn chiếu |
-| **Thành viên E** | Frontend Dashboard & QA | Xây dựng `DashboardPage.jsx`, biểu đồ `EmotionChart.jsx` với Mock JSON | Nối API kết quả thật, tính năng nhấp Timeline nhảy video và viết báo cáo |
+| **`POST`** | `/api/sessions/{session_id}/chat` | Gửi tin nhắn cho chatbot tư vấn trong hoặc sau phiên phỏng vấn. |
+| **`GET`** | `/api/sessions/{session_id}/chat/history` | Lấy lịch sử hội thoại của một phiên. |
+| **`DELETE`** | `/api/sessions/{session_id}/chat/history` | Xóa lịch sử hội thoại của một phiên. |
+| **`GET`** | `/health` | Kiểm tra trạng thái hoạt động của backend. |
