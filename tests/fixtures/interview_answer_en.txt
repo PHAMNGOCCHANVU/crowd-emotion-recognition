@@ -1,1 +1,0 @@
-In our university project, the interview results page was slow. I was responsible for the backend. I measured the database queries, added an index, and removed repeated requests. The page became faster in our local tests. Next time, I would record the response time before and after each change.

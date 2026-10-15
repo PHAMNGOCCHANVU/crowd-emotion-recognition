@@ -49,6 +49,7 @@ class SessionDetail(Base):
     
     emotion_timeline = Column(JSON, nullable=True)  # [{"second": 1, "emotion": "Normal", ...}]
     ai_feedback = Column(JSON, nullable=True)       # {"content_critique", "delivery_critique", "suggested_answer"}
+    video_url = Column(String(500), nullable=True)   # Đường dẫn phát video trực tiếp (Firebase Cloud Storage)
     status = Column(String(20), default="PENDING")   # PENDING, PROCESSING, COMPLETED, FAILED
     created_at = Column(DateTime, default=datetime.utcnow)
 

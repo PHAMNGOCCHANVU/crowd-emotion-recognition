@@ -1,16 +1,17 @@
 """
-interview_analytics.py — Phân tích Cảm xúc & Phong thái Ứng viên Phỏng vấn
-=============================================================================
-Refactor từ crowd_analytics.py:
-Thay vì thống kê đám đông CCTV, module này phân tích chuỗi cảm xúc cá nhân của
-ứng viên qua từng giây trả lời phỏng vấn để tính toán:
-1. Confidence Score (Chỉ số Tự tin): Tỷ lệ biểu cảm tích cực & bình thản.
-2. Stress Score (Chỉ số Căng thẳng): Tỷ lệ nét mặt lo âu, nhăn nhó, sợ sệt.
-3. Emotion Timeline: Chuỗi diễn biến cảm xúc theo giây để đồng bộ video replay.
+interview_analytics.py — Phân tích Cảm xúc & Phong thái Ứng viên Phỏng vấn (6 Nhãn)
+===================================================================================
+Module phân tích chuỗi cảm xúc cá nhân của ứng viên qua từng giây trả lời phỏng vấn:
+1. Confidence Score (Chỉ số Tự tin): Tỷ lệ biểu cảm tích cực & điềm tĩnh (Normal, Happy),
+   trừ điểm các biểu cảm lo âu/tiêu cực (Fear, Sad, Contempt, Surprised).
+2. Stress Score (Chỉ số Căng thẳng): Chỉ báo áp lực tâm lý mạnh (Fear, Sad, Contempt).
+3. Emotion Timeline: Chuỗi diễn biến cảm xúc 6 nhãn theo từng giây phục vụ video replay và chatbot.
 """
 
 from collections import Counter
 from typing import List, Dict, Any
+
+EMOTION_CLASSES = ["Contempt", "Fear", "Happy", "Normal", "Sad", "Surprised"]
 
 
 class InterviewEmotionAnalytics:
@@ -36,7 +37,7 @@ class InterviewEmotionAnalytics:
                 - confidence_score: float (0.0 - 100.0)
                 - stress_score: float (0.0 - 100.0)
                 - dominant_emotion: str
-                - emotion_distribution: dict
+                - emotion_distribution: dict (đủ 6 nhãn)
                 - emotion_timeline: List[dict] (tổng hợp theo từng giây)
         """
         if not frame_predictions:
@@ -44,12 +45,7 @@ class InterviewEmotionAnalytics:
                 "confidence_score": 50.0,
                 "stress_score": 0.0,
                 "dominant_emotion": "Normal",
-                "emotion_distribution": {
-                    "Happy": 0.0,
-                    "Normal": 1.0,
-                    "Sad": 0.0,
-                    "Surprised": 0.0,
-                },
+                "emotion_distribution": {emo: (1.0 if emo == "Normal" else 0.0) for emo in EMOTION_CLASSES},
                 "emotion_timeline": [],
             }
 
@@ -58,25 +54,30 @@ class InterviewEmotionAnalytics:
         counts = Counter(emotions)
 
         dist = {
-            "Happy": round(counts.get("Happy", 0) / total_frames, 4),
-            "Normal": round(counts.get("Normal", 0) / total_frames, 4),
-            "Sad": round(counts.get("Sad", 0) / total_frames, 4),
-            "Surprised": round(counts.get("Surprised", 0) / total_frames, 4),
+            label: round(counts.get(label, 0) / total_frames, 4)
+            for label in EMOTION_CLASSES
         }
 
         # 1. Tính Confidence Score (0 - 100%)
-        # Tự tin = Tỷ lệ Normal (điềm đạm) * 0.8 + Happy (tươi cười) * 1.0 - phạt Sad/Surprised
+        # Tự tin = Normal (điềm đạm) * 85 + Happy (tươi cười) * 100 - trừ Fear/Sad/Contempt/Surprised
         raw_conf = (
             dist["Normal"] * 85.0
             + dist["Happy"] * 100.0
+            - dist["Fear"] * 50.0
             - dist["Sad"] * 40.0
-            - dist["Surprised"] * 30.0
+            - dist["Contempt"] * 25.0
+            - dist["Surprised"] * 15.0
         )
         confidence_score = max(10.0, min(98.0, raw_conf))
 
         # 2. Tính Stress Score (0 - 100%)
-        # Căng thẳng = Sad * 70% + Surprised * 30%
-        raw_stress = (dist["Sad"] * 1.2 + dist["Surprised"] * 0.8) * 100.0
+        # Căng thẳng = Fear (150%) + Sad (120%) + Contempt (60%) + Surprised (30%)
+        raw_stress = (
+            dist["Fear"] * 1.5
+            + dist["Sad"] * 1.2
+            + dist["Contempt"] * 0.6
+            + dist["Surprised"] * 0.3
+        ) * 100.0
         stress_score = max(0.0, min(100.0, raw_stress))
 
         # 3. Tổng hợp Emotion Timeline theo từng giây (mỗi giây gồm ~fps frames)
@@ -96,7 +97,8 @@ class InterviewEmotionAnalytics:
             most_common_emo = Counter(sec_emotions).most_common(1)[0][0]
             avg_conf = sum(sec_confidences) / len(sec_confidences)
 
-            is_stress = most_common_emo in ["Sad", "Surprised"]
+            # Đánh dấu cờ stress khi cảm xúc là Fear (lo âu), Sad (buồn bã) hoặc Contempt (khó chịu)
+            is_stress = most_common_emo in ["Fear", "Sad", "Contempt"]
 
             timeline.append(
                 {

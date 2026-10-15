@@ -49,6 +49,7 @@ class QuestionResultDetail(BaseModel):
     metrics: Dict[str, float]
     emotion_timeline: List[Dict[str, Any]] = []
     ai_feedback: Dict[str, Any] = {}
+    video_url: Optional[str] = None
 
 
 class SessionSummary(BaseModel):

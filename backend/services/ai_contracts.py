@@ -73,12 +73,12 @@ class SpeechResult(Contract):
     metadata: ServiceMetadata
 
 
-Score = Annotated[float, Field(ge=0, le=100, strict=True)]
+Score = Annotated[float, Field(ge=0, le=100)]
 
 
 class EmotionPoint(Contract):
     second: float = Field(ge=0)
-    emotion: Literal["Happy", "Normal", "Sad", "Surprised"]
+    emotion: Literal["Contempt", "Fear", "Happy", "Normal", "Sad", "Surprised"]
     confidence: float | None = Field(default=None, ge=0, le=1)
     is_stress: bool | None = None
 
@@ -87,7 +87,7 @@ class EmotionMetrics(Contract):
     # Missing FER data is not silently converted to zero confidence/stress.
     confidence_score: Score | None = None
     stress_score: Score | None = None
-    dominant_emotion: Literal["Happy", "Normal", "Sad", "Surprised"] | None = None
+    dominant_emotion: Literal["Contempt", "Fear", "Happy", "Normal", "Sad", "Surprised"] | None = None
     emotion_distribution: dict[str, float] = Field(default_factory=dict)
     emotion_timeline: list[EmotionPoint] = Field(default_factory=list, max_length=600)
 

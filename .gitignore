@@ -10,11 +10,15 @@ __pycache__/
 
 # --- Virtual Environments ---
 .venv/
+*/.venv/
+backend/.venv/
+training/.venv/
 venv/
 env/
 ENV/
 env.bak/
 venv.bak/
+
 
 # --- IDEs & Editors ---
 .vscode/
@@ -51,11 +55,11 @@ backend/interview.db
 .env
 .env.local
 .env.*.local
+serviceAccountKey.json
+*firebase*.json
 
 # --- Model Weights & Heavy Checkpoints ---
-*.pt
 *.pth
-*.onnx
 *.bin
 *.h5
 *.tflite
@@ -65,6 +69,9 @@ yolov8n.pt
 # Ngoại lệ cho trọng số mô hình chính thức của dự án
 !weights/crowd_emotion_resnet18.pt
 !weights/yolov8n-face.pt
+!backend/weights/mini_resnet_se_6emo.onnx
+!backend/weights/mini_resnet_se_6emo_quant.onnx
+
 
 # --- Datasets & Media (Tránh đẩy dữ liệu ảnh/video quá lớn lên Git) ---
 Dataset/

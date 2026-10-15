@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import VideoPreview from '../components/VideoPreview';
 import { api } from '../services/api';
 import { Camera, ArrowRight, ShieldCheck } from 'lucide-react';
@@ -17,6 +17,7 @@ export default function SetupPage({ onStartInterview }) {
   const [stream, setStream] = useState(null);
   const [loading, setLoading] = useState(false);
   const [cameraError, setCameraError] = useState('');
+  const isStartingRef = useRef(false);
 
   useEffect(() => {
     // Kích hoạt camera để ứng viên kiểm tra thiết bị
@@ -32,7 +33,8 @@ export default function SetupPage({ onStartInterview }) {
       });
 
     return () => {
-      if (stream) {
+      // Chỉ ngắt camera khi người dùng rời khỏi trang mà KHÔNG bấm bắt đầu phỏng vấn
+      if (!isStartingRef.current && stream) {
         stream.getTracks().forEach((t) => t.stop());
       }
     };
@@ -42,6 +44,7 @@ export default function SetupPage({ onStartInterview }) {
     setLoading(true);
     try {
       const data = await api.startSession(selectedRole, jdText);
+      isStartingRef.current = true;
       if (onStartInterview) {
         onStartInterview(data, stream);
       }
@@ -58,6 +61,7 @@ export default function SetupPage({ onStartInterview }) {
           { order_index: 3, question_text: 'Sự khác biệt giữa xử lý bất đồng bộ (Async) và đa luồng (Multithread) là gì?', time_limit_seconds: 120 },
         ],
       };
+      isStartingRef.current = true;
       if (onStartInterview) onStartInterview(mockSession, stream);
     } finally {
       setLoading(false);

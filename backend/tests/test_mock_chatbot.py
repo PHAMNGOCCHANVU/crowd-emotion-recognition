@@ -13,6 +13,10 @@ import uuid
 from pathlib import Path
 from datetime import datetime
 
+# Đảm bảo hiển thị unicode tiếng Việt và emoji trên console Windows
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 # Đảm bảo đường dẫn import cho backend
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 if str(ROOT_DIR) not in sys.path:

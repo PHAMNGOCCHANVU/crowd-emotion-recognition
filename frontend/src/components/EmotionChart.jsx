@@ -3,9 +3,12 @@ import React from 'react';
 const EMOTION_COLORS = {
   Happy: '#22c55e',     // Xanh lá (Tự tin/Tích cực)
   Normal: '#3b82f6',    // Xanh dương (Điềm đạm/Bình thản)
-  Sad: '#ef4444',       // Đỏ (Căng thẳng/Nhăn nhó)
+  Sad: '#ef4444',       // Đỏ (Buồn bã/Căng thẳng)
   Surprised: '#f59e0b', // Vàng cam (Hoang mang/Bối rối)
+  Fear: '#8b5cf6',      // Tím (Lo âu/Áp lực)
+  Contempt: '#ec4899',  // Hồng đậm (Khó chịu/Coi thường)
 };
+
 
 export default function EmotionChart({ timeline = [], onSeekSecond, currentSecond = 0 }) {
   if (!timeline || timeline.length === 0) {

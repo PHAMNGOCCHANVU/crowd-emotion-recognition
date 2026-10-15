@@ -5,6 +5,7 @@ from ..models import InterviewSession, SessionDetail
 from .fer_service import analyze_interview_video_fer
 from .speech_service import transcribe_audio_whisper
 from .llm_service import evaluate_interview_answer_llm
+from .firebase_storage import upload_interview_video_to_firebase
 from .ai_contracts import ServiceError
 
 logger = logging.getLogger(__name__)
@@ -96,7 +97,10 @@ def process_answer_in_background(
         llm_feedback["speech_metadata"] = speech_results.get("metadata", {})
         llm_feedback["word_timestamps"] = speech_results.get("words", [])
 
-        # 4. Cập nhật SessionDetail
+        # 4. Tải video lên Firebase Cloud Storage (nếu có key, ngược lại fallback)
+        video_url = upload_interview_video_to_firebase(temp_video_path, session_id, order_index)
+
+        # 5. Cập nhật SessionDetail
         detail.transcript = transcript
         detail.filler_words_count = filler_words_count
         detail.confidence_score = confidence_score
@@ -104,9 +108,10 @@ def process_answer_in_background(
         detail.content_score = content_score
         detail.emotion_timeline = emotion_timeline
         detail.ai_feedback = llm_feedback
+        detail.video_url = video_url
         detail.status = "FAILED" if is_mock else "COMPLETED"
 
-        # 5. Cập nhật lại điểm trung bình của InterviewSession
+        # 6. Cập nhật lại điểm trung bình của InterviewSession
         _update_summary(db, session)
 
         db.commit()

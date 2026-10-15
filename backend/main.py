@@ -4,19 +4,31 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 # Đảm bảo đường dẫn import cho toàn bộ backend
-CURRENT_DIR = Path(__file__).resolve().parent
-ROOT_DIR = CURRENT_DIR.parent
-load_dotenv(ROOT_DIR / ".env", override=False)
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
+BACKEND_DIR = Path(__file__).resolve().parent
+ROOT_DIR = BACKEND_DIR.parent
+
+# Ưu tiên nạp backend/.env, sau đó fallback root .env
+if (BACKEND_DIR / ".env").exists():
+    load_dotenv(BACKEND_DIR / ".env", override=False)
+elif (ROOT_DIR / ".env").exists():
+    load_dotenv(ROOT_DIR / ".env", override=False)
+
+for p in [str(ROOT_DIR), str(BACKEND_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
 
 from backend.database import engine, Base
+import backend.models  # Đảm bảo nạp đầy đủ ORM models trước khi tạo bảng
 from backend.api.sessions import router as sessions_router
 from backend.api.questions import router as questions_router
 from backend.api.chatbot import router as chatbot_router
 
-# Tự động tạo bảng SQLite nếu chưa có
+# Tự động ánh xạ và tạo bảng nếu chưa có
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(

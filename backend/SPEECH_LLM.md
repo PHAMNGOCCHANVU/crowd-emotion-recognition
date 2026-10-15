@@ -31,8 +31,8 @@ CLI tự tải `.env`; khi C tích hợp, entry point backend cần gọi `load_
 ## Chạy kiểm thử và demo
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests -q
-.\.venv\Scripts\python.exe -m scripts.check_speech_llm tests/fixtures/interview_answer_en.webm --mode mock --output artifacts/speech-llm-demo.json
+.\backend\.venv\Scripts\python.exe -m pytest backend/tests -q
+.\backend\.venv\Scripts\python.exe -m backend.scripts.check_speech_llm tests/fixtures/interview_answer_en.webm --mode mock --output artifacts/speech-llm-demo.json
 ```
 
 Demo thực sự giải mã file bằng FFmpeg, nhưng transcript/nhận xét là dữ liệu minh họa cố định. Transcript tiếng Việt trong chế độ mock không phải bản chép của audio tiếng Anh. `words` rỗng vì không có timestamps đo thật. Cờ `metadata.is_mock=true` xuất hiện ở cả hai kết quả; benchmark ghi `measured_live=false` và `target_met=null`.
@@ -40,8 +40,9 @@ Demo thực sự giải mã file bằng FFmpeg, nhưng transcript/nhận xét l�
 Audio mẫu `tests/fixtures/interview_answer_en.webm` dài khoảng 22 giây, được tổng hợp cục bộ từ Windows SAPI. Nội dung nguồn là `tests/fixtures/interview_answer_en.txt`; không phải bản thu của một người thật. Có thể tạo lại WAV trên Windows bằng:
 
 ```powershell
-./scripts/make_sample_audio.ps1
+./backend/scripts/make_sample_audio.ps1
 ```
+
 
 Chạy với API thật sau khi điền key:
 
