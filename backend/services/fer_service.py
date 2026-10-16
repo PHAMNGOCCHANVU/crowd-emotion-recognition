@@ -1,7 +1,5 @@
 import os
 import sys
-import subprocess
-import tempfile
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -143,30 +141,52 @@ def _predict_emotion(face_bgr) -> tuple[str, float]:
 
 def _prepare_video_for_opencv(video_path: str) -> tuple[str, bool]:
     """
-    Chuẩn hóa container video (đặc biệt WebM từ browser MediaRecorder thiếu metadata)
-    bằng cách remux sang Matroska (.mkv) có đầy đủ index và timestamps để OpenCV đọc ổn định.
-    Returns: (path_to_open, is_temporary_file)
+    Chuẩn hóa video WebM từ trình duyệt (thiếu Cues/Duration metadata)
+    sang container hoàn chỉnh bằng FFmpeg (-c:v copy) để OpenCV đọc mượt mà 100% frame.
+    Trả về (đường dẫn video sẵn sàng, cờ có phải file tạm cần dọn dẹp hay không).
     """
-    if not os.path.exists(video_path) or os.path.getsize(video_path) == 0:
+    import tempfile
+    import subprocess
+    import imageio_ffmpeg
+
+    if not os.path.exists(video_path):
         return video_path, False
 
     try:
-        import imageio_ffmpeg
-        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-        fd, temp_mkv = tempfile.mkstemp(suffix=".mkv", prefix="fer_remux_")
-        os.close(fd)
-        cmd = [
-            ffmpeg_exe, "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
-            "-i", video_path, "-c:v", "copy", "-an", "-fflags", "+genpts", temp_mkv
-        ]
-        res = subprocess.run(cmd, capture_output=True, timeout=15)
-        if res.returncode == 0 and os.path.exists(temp_mkv) and os.path.getsize(temp_mkv) > 0:
-            return temp_mkv, True
-        if os.path.exists(temp_mkv):
-            os.remove(temp_mkv)
-    except Exception as e:
-        print(f"[FER Service Warning] Không thể remux video bằng FFmpeg, dùng file gốc: {e}")
+        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return video_path, False
 
+    tmp_out = tempfile.NamedTemporaryFile(suffix=".mkv", delete=False)
+    tmp_out_path = tmp_out.name
+    tmp_out.close()
+
+    try:
+        # 1. Thử remux luồng video (-c:v copy) siêu nhanh (< 0.1s, giữ nguyên chất lượng)
+        cmd_copy = [
+            ffmpeg_bin, "-y", "-loglevel", "error",
+            "-i", video_path, "-c:v", "copy", "-fflags", "+genpts", "-an", tmp_out_path
+        ]
+        res = subprocess.run(cmd_copy, capture_output=True, timeout=10)
+        if res.returncode == 0 and os.path.exists(tmp_out_path) and os.path.getsize(tmp_out_path) > 0:
+            return tmp_out_path, True
+
+        # 2. Dự phòng transcode nhanh sang h264 nếu container WebM đặc biệt
+        cmd_trans = [
+            ffmpeg_bin, "-y", "-loglevel", "error",
+            "-i", video_path, "-c:v", "libx264", "-preset", "ultrafast", "-an", tmp_out_path
+        ]
+        res_trans = subprocess.run(cmd_trans, capture_output=True, timeout=20)
+        if res_trans.returncode == 0 and os.path.exists(tmp_out_path) and os.path.getsize(tmp_out_path) > 0:
+            return tmp_out_path, True
+    except Exception as e:
+        print(f"[FER Service Warning] Không thể remux video bằng FFmpeg: {e}")
+
+    if os.path.exists(tmp_out_path):
+        try:
+            os.remove(tmp_out_path)
+        except OSError:
+            pass
     return video_path, False
 
 
@@ -181,20 +201,16 @@ def analyze_interview_video_fer(video_path: str) -> Dict[str, Any]:
     Returns:
         dict gồm: confidence_score, stress_score, dominant_emotion, emotion_distribution, emotion_timeline
     """
-    video_to_read, is_temp = _prepare_video_for_opencv(video_path)
-    cap = cv.VideoCapture(video_to_read)
-    if not cap.isOpened():
-        print(f"[FER Service Warning] Không thể mở file video: {video_path}")
-        if is_temp and os.path.exists(video_to_read):
-            try:
-                os.remove(video_to_read)
-            except Exception:
-                pass
-        return _analytics.analyze_interview_sequence([])
-
+    ready_video_path, is_temp = _prepare_video_for_opencv(video_path)
     try:
-        raw_fps = cap.get(cv.CAP_PROP_FPS) or 25.0
-        fps = raw_fps if (0 < raw_fps <= 120.0) else 25.0
+        cap = cv.VideoCapture(ready_video_path)
+        if not cap.isOpened():
+            print(f"[FER Service Warning] Không thể mở file video: {video_path}")
+            return _analytics.analyze_interview_sequence([])
+
+        fps = cap.get(cv.CAP_PROP_FPS) or 25.0
+        if fps <= 0 or fps > 120:
+            fps = 25.0
 
         # Đọc cách quãng (mỗi 5 frame đọc 1 frame) để tăng tốc độ xử lý video
         skip_frames = max(1, int(fps // 5))
@@ -243,15 +259,15 @@ def analyze_interview_video_fer(video_path: str) -> Dict[str, Any]:
 
             frame_idx += 1
 
+        cap.release()
+
         if not frame_predictions:
             return analytics.analyze_interview_sequence([])
 
         return analytics.analyze_interview_sequence(frame_predictions)
-
     finally:
-        cap.release()
-        if is_temp and os.path.exists(video_to_read):
+        if is_temp and os.path.exists(ready_video_path):
             try:
-                os.remove(video_to_read)
-            except Exception:
+                os.remove(ready_video_path)
+            except OSError:
                 pass

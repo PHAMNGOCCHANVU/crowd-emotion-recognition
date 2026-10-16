@@ -73,7 +73,7 @@ class SpeechResult(Contract):
     metadata: ServiceMetadata
 
 
-Score = Annotated[float, Field(ge=0, le=100)]
+Score = Annotated[float, Field(ge=0, le=100, strict=True)]
 
 
 class EmotionPoint(Contract):

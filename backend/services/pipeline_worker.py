@@ -75,7 +75,25 @@ def process_answer_in_background(
         emotion_timeline = fer_results.get("emotion_timeline", [])
 
         # 2. Trích xuất Whisper (Lời nói & Từ ngập ngừng)
-        speech_results = transcribe_audio_whisper(temp_video_path)
+        try:
+            speech_results = transcribe_audio_whisper(temp_video_path)
+        except ServiceError as se:
+            logger.warning("Whisper transcription error (%s): %s", se.code, se)
+            if se.code in ("invalid_speech_response", "invalid_duration", "invalid_media"):
+                speech_results = {
+                    "transcript": "",
+                    "filler_words_count": 0,
+                    "words": [],
+                    "metadata": {
+                        "provider": "local",
+                        "model": "whisper-fallback",
+                        "is_mock": False,
+                        "fallback_reason": se.code,
+                        "latency_ms": 0.0,
+                    },
+                }
+            else:
+                raise
         transcript = speech_results.get("transcript", "")
         filler_words_count = speech_results.get("filler_words_count", 0)
 
@@ -120,7 +138,7 @@ def process_answer_in_background(
     except Exception as e:
         db.rollback()
         code = e.code if isinstance(e, ServiceError) else "pipeline_error"
-        logger.warning("Interview pipeline failed (%s)", code)
+        logger.exception("Interview pipeline failed (%s): %s", code, e)
         if detail:
             detail.status = "FAILED"
             detail.content_score = None
