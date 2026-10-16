@@ -5,6 +5,10 @@ import DashboardPage from './pages/DashboardPage';
 import HomePage from './pages/HomePage';
 import AuthPage from './pages/AuthPage';
 import { Mic2, Home, Video, History, UserRound, Sparkles, ChevronRight } from 'lucide-react';
+import AdminLayout from './pages/Admin/AdminLayout';
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import AdminUsers from './pages/Admin/AdminUsers';
+import AdminInterviews from './pages/Admin/AdminInterviews';
 
 export default function App() {
   const initialPath = window.location.pathname;
@@ -125,9 +129,21 @@ export default function App() {
     ['profile', 'Hồ sơ', UserRound],
   ];
 
+  if (route.startsWith('/admin')) {
+    return (<AdminLayout currentRoute={route} onNavigate={(path) => {window.history.pushState({}, '', path); setRoute(path); }} />
+    );
+  }
+
   if (!user) {
     if (route === '/' || route === '/home') return <><header className="app-header public-header"><div className="brand"><span className="brand-mark"><Mic2 size={18} /></span><span>InterviewLab</span></div><div className="public-actions"><button className="auth-link" onClick={() => { setPublicPage('login'); navigate('/login'); }}>Đăng nhập</button><button className="primary-button" onClick={() => { setPublicPage('register'); navigate('/register'); }}>Đăng ký</button></div></header><HomePage onLogin={() => { setPublicPage('login'); navigate('/login'); }} onRegister={() => { setPublicPage('register'); navigate('/register'); }} /></>;
-    return <><header className="app-header public-header"><div className="brand"><span className="brand-mark"><Mic2 size={18} /></span><span>InterviewLab</span></div><button className="auth-link" onClick={() => { setPublicPage('home'); navigate('/'); }}>Trang chủ</button></header><AuthPage mode={route === '/register' ? 'register' : 'login'} onModeChange={(mode) => { setPublicPage(mode); navigate(`/${mode}`); }} onAuthenticated={(nextUser) => { setUser(nextUser); setActiveSection('interview'); setCurrentPage('setup'); navigate('/interview'); }} /></>;
+    return <><header className="app-header public-header"><div className="brand"><span className="brand-mark"><Mic2 size={18} /></span><span>InterviewLab</span></div><button className="auth-link" onClick={() => { setPublicPage('home'); navigate('/'); }}>Trang chủ</button></header>
+    <AuthPage mode={route === '/register' ? 'register' : 'login'} onModeChange={(mode) => { setPublicPage(mode); navigate(`/${mode}`); }} onAuthenticated={(nextUser) => { setUser(nextUser); 
+    if (nextUser?.email === 'admin@interviewlab.test' || nextUser?.role === 'admin') {
+      navigate('/admin');
+    } else {
+      setActiveSection('interview'); 
+      setCurrentPage('setup'); 
+      navigate('/interview'); }}} /></>;
   }
 
   return (
