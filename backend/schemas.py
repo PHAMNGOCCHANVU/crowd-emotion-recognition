@@ -1,4 +1,5 @@
 from typing import List, Optional, Dict, Any
+from datetime import datetime
 from pydantic import BaseModel, Field
 
 
@@ -65,3 +66,111 @@ class SessionResultResponse(BaseModel):
     role_name: str
     summary: SessionSummary
     details: List[QuestionResultDetail]
+
+
+class SegmentBase(BaseModel):
+    name: str = Field(..., description="Tên phân khúc")
+    code: Optional[str] = Field(None, description="Mã định danh")
+    description: Optional[str] = None
+    industry_id: str
+    position_id: str
+    status: Optional[str] = "ACTIVE"
+    sort_order: Optional[int] = 0
+
+
+class SegmentCreate(SegmentBase):
+    pass
+
+
+class SegmentUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    description: Optional[str] = None
+    industry_id: Optional[str] = None
+    position_id: Optional[str] = None
+    status: Optional[str] = None
+    sort_order: Optional[int] = None
+
+
+class SegmentResponse(SegmentBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SubmitAnswerRequest(BaseModel):
+    question_id: str
+    user_answer: str
+
+
+class AttemptSummaryResponse(BaseModel):
+    id: str
+    test_id: str
+    started_at: datetime
+    completed_at: Optional[datetime]
+    total_score: float
+    max_score: float
+    status: str
+
+    class Config:
+        from_attributes = True
+
+
+class AttemptAnswerDetail(BaseModel):
+    question_id: str
+    user_answer: Optional[str]
+    correct_answer_snapshot: Optional[str]
+    is_correct: Optional[bool]
+    score: float
+    max_score: float
+
+
+class AttemptSectionDetail(BaseModel):
+    section_id: str
+    score: float
+    max_score: float
+    correct_count: int
+    question_count: int
+
+
+class AttemptFullDetailResponse(AttemptSummaryResponse):
+    sections: List[AttemptSectionDetail]
+    answers: List[AttemptAnswerDetail]
+
+
+class IndustryCreate(BaseModel):
+    name: str
+    code: str
+
+
+class PositionCreate(BaseModel):
+    industry_id: str
+    name: str
+
+
+class UserProfileResponse(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    phone_number: Optional[str]
+    role: str
+
+    class Config:
+        from_attributes = True
+
+
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = Field(
+        None, min_length=2, description="Họ và tên"
+    )
+    phone_number: Optional[str] = Field(None, description="Số điện thoại")
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(
+        ..., min_length=8, description="Mật khẩu mới tối thiểu 8 ký tự"
+    )
