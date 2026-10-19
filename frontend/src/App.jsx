@@ -154,7 +154,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="brand"><span className="brand-mark"><Mic2 size={18} /></span><span>InterviewLab</span></div>
+        <a href="/" className="brand"><span className="brand-mark"><Mic2 size={18} /></span><span>InterviewLab</span></a>
         <div className="header-meta">Phân tích đa phương thức · FER · Whisper · Gemini</div>
       </header>
 
