@@ -4,7 +4,9 @@ import InterviewRoom from './pages/InterviewRoom';
 import DashboardPage from './pages/DashboardPage';
 import HomePage from './pages/HomePage';
 import AuthPage from './pages/AuthPage';
-import { Mic2, Home, Video, History, UserRound, Sparkles, ChevronRight } from 'lucide-react';
+import UserHomePage from './pages/UserHomePage';
+import HistoryPage from './pages/HistoryPage';
+import { Mic2, Home, Video, History, UserRound, Sparkles, ChevronRight, LogOut } from 'lucide-react';
 import AdminLayout from './pages/Admin/AdminLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminUsers from './pages/Admin/AdminUsers';
@@ -20,6 +22,7 @@ export default function App() {
   const [activeSection, setActiveSection] = useState('interview');
   const [publicPage, setPublicPage] = useState(initialPath === '/register' ? 'register' : initialPath === '/login' ? 'login' : 'home');
   const [user, setUser] = useState(null);
+  const [interviewPreset, setInterviewPreset] = useState(null);
 
   useEffect(() => {
     const handlePopState = () => setRoute(window.location.pathname);
@@ -62,6 +65,7 @@ export default function App() {
   const handleNavigation = (section) => {
     setActiveSection(section);
     if (section === 'interview') {
+      setInterviewPreset(null);
       setCurrentPage('setup');
       setSessionData(null);
       setRecordedBlobs({});
@@ -71,28 +75,30 @@ export default function App() {
     }
   };
 
-  const renderSection = () => {
-    if (activeSection === 'history') {
-      return (
-        <div className="empty-page">
-          <div className="eyebrow">Your activity</div>
-          <h1 className="page-title">Lịch sử phỏng vấn</h1>
-          <p className="page-subtitle">Theo dõi những phiên luyện tập gần đây của bạn.</p>
-          <div className="history-list">
-            {[
-              ['Software Engineer', '11/10/2026 · 10:32', '85'],
-              ['Data Analyst', '08/10/2026 · 16:18', '78'],
-              ['Product Marketing', '04/10/2026 · 09:45', '82'],
-            ].map(([role, date, score]) => (
-              <div className="history-row" key={`${role}-${date}`}>
-                <div><div className="history-role">{role}</div><div className="history-date">{date}</div></div>
-                <div className="history-score">{score}<small>/100</small></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
+  const handleStartFromHome = (preset = null) => {
+    setActiveSection('interview');
+    setCurrentPage('setup');
+    setSessionData(null);
+    setRecordedBlobs({});
+    setInterviewPreset(preset);
+    navigate('/interview');
+  };
+
+  const handleLogout = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
     }
+    setUser(null);
+    setSessionData(null);
+    setCameraStream(null);
+    setRecordedBlobs({});
+    setCurrentPage('setup');
+    setActiveSection('interview');
+    navigate('/');
+  };
+
+  const renderSection = () => {
+    if (activeSection === 'history') return <HistoryPage />;
     if (activeSection === 'profile') {
       return (
         <div className="empty-page">
@@ -108,15 +114,14 @@ export default function App() {
     }
     if (activeSection === 'home') {
       return (
-        <div className="empty-page">
-          <div className="eyebrow">Welcome back</div>
-          <h1 className="page-title">Sẵn sàng cho phiên luyện tập tiếp theo?</h1>
-          <p className="page-subtitle">Luyện tập với câu hỏi phù hợp vị trí và nhận phản hồi đa chiều từ AI.</p>
-          <button className="primary-button" style={{ marginTop: 24 }} onClick={() => handleNavigation('interview')}>Bắt đầu phỏng vấn <ChevronRight size={15} style={{ verticalAlign: 'middle' }} /></button>
-        </div>
+        <UserHomePage
+          user={user}
+          onStartInterview={handleStartFromHome}
+          onOpenHistory={() => handleNavigation('history')}
+        />
       );
     }
-    if (currentPage === 'setup') return <SetupPage onStartInterview={handleStartInterview} />;
+    if (currentPage === 'setup') return <SetupPage initialPositionId={interviewPreset?.positionId} initialLevel={interviewPreset?.level} onStartInterview={handleStartInterview} />;
     if (currentPage === 'interview' && sessionData) return <InterviewRoom session={sessionData} stream={cameraStream} onFinishInterview={handleFinishInterview} />;
     if (currentPage === 'dashboard' && sessionData) return <DashboardPage sessionId={sessionData.session_id} blobsMap={recordedBlobs} onRestart={handleRestart} />;
     return null;
@@ -141,9 +146,9 @@ export default function App() {
     if (nextUser?.email === 'admin@interviewlab.test' || nextUser?.role === 'admin') {
       navigate('/admin');
     } else {
-      setActiveSection('interview'); 
+      setActiveSection('home'); 
       setCurrentPage('setup'); 
-      navigate('/interview'); }}} /></>;
+      navigate('/home'); }}} /></>;
   }
 
   return (
@@ -163,6 +168,9 @@ export default function App() {
               </button>
             ))}
           </nav>
+          <button className="sidebar-item sidebar-logout" onClick={handleLogout}>
+            <LogOut size={17} /><span>Đăng xuất</span>
+          </button>
           <div className="sidebar-note"><Sparkles size={14} style={{ verticalAlign: 'middle', marginRight: 5 }} /> AI phân tích giúp bạn cải thiện từng câu trả lời.</div>
         </aside>
         <main className="main-content">{renderSection()}</main>
