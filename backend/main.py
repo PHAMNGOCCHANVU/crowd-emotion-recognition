@@ -31,6 +31,7 @@ from backend.api.segments import router as segments_router
 from backend.api.attempts import router as attempts_router
 from backend.api.admin import router as admin_router
 from backend.api.users import router as users_router
+from backend.api.agents import router as agents_router
 
 # Tự động ánh xạ và tạo bảng nếu chưa có
 Base.metadata.create_all(bind=engine)
@@ -57,6 +58,7 @@ app.include_router(segments_router)
 app.include_router(attempts_router)
 app.include_router(admin_router)
 app.include_router(users_router)
+app.include_router(agents_router)
 
 
 @app.get("/")
