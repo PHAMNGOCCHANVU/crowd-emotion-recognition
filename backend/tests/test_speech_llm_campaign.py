@@ -5,6 +5,12 @@ import pytest
 
 from backend.services.ai_contracts import AISettings, ServiceError
 from scripts import run_speech_llm_campaign as campaign
+from pathlib import Path
+campaign.ROOT = Path(__file__).resolve().parents[2]
+campaign.SOURCE_FILES = (
+    'backend/services/ai_contracts.py', 'backend/services/speech_service.py',
+    'backend/services/llm_service.py', 'backend/scripts/run_speech_llm_campaign.py',
+)
 
 
 def speech():

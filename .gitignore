@@ -96,6 +96,7 @@ runs/
 
 # --- Tài liệu nội bộ (User-specified) ---
 docs/
+!docs/specs/
 
 # Member B local tests and temporary audio outputs
 .pytest_cache/

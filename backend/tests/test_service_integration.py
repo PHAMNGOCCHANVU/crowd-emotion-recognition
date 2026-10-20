@@ -30,7 +30,7 @@ def test_cli_mock_report_does_not_claim_live_latency(sample_audio, tmp_path):
     report_path = tmp_path / "report.json"
     result = subprocess.run(
         [sys.executable, "-m", "scripts.check_speech_llm", str(sample_audio), "--mode", "mock", "--output", str(report_path)],
-        cwd=Path(__file__).resolve().parents[1], env={**os.environ, "PYTHONUTF8": "1"},
+        cwd=Path(__file__).resolve().parents[1], env={**os.environ, "PYTHONUTF8": "1", "PYTHONPATH": str(Path(__file__).resolve().parents[2])},
         capture_output=True, encoding="utf-8", timeout=30,
     )
     assert result.returncode == 0, result.stderr
