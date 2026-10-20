@@ -2,7 +2,8 @@ import axios from 'axios';
 import { mockListPositions, mockListQuestions, mockListRecentResults, mockListSessionHistory } from './mockData';
 import { mockAgentChat, mockListConversations, mockSaveConversation, mockDeleteConversation } from './agentMock';
 
-const API_BASE = '/api';
+// Local dev dùng proxy '/api'; khi deploy đặt VITE_API_BASE_URL=https://<backend>/api
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
 
 // Tự động gắn X-User-Id header từ localStorage nếu có
 axios.interceptors.request.use((config) => {
