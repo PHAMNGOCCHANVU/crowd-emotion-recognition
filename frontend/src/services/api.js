@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE = '/api';
+// Local dev dùng proxy '/api'; khi deploy đặt VITE_API_BASE_URL=https://<backend>/api
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
 
 const MOCK_USER = {
   user_id: 'mock_user_001',
