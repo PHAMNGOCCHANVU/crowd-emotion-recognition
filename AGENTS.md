@@ -31,3 +31,4 @@ Khi một Agent được kích hoạt, hãy nạp ngữ cảnh theo thứ tự �
 - **Bảo mật thông tin:** Không bao giờ hardcode API Key, mật khẩu, JWT secret hay thông tin nhạy cảm vào mã nguồn. Luôn sử dụng biến môi trường.
 - **Tự xác minh trước khi hoàn tất:** Mọi Agent phải tự chạy lệnh kiểm tra cú pháp (Linter) và biên dịch (Compile/Type-check) thành công trước khi báo cáo hoàn thành nhiệm vụ.
 - Đọc `.antigravityignore` và `.clineignore` là để biết được những file không cần đọc, không cần sửa để giảm chi phí token.
+- Dùng model thinking **chỉ để** lập kế hoạch, đưa ra kiến trúc, đưa ra các giải pháp, **không dùng để** viết code. Dùng model fast để viết code, viết test, viết tài liệu, viết các thứ khác. **QUY TẮC NÀY ÁP DỤNG CHO TẤT CẢ CÁC AGENT**
