@@ -1,0 +1,54 @@
+{
+  "source": "Synthetic Vietnamese speech generated locally with Windows SpeechSynthesis, Microsoft An (vi-VN). Fictional interview stories; not recordings of a real speaker.",
+  "reference_type": "Written TTS input; word timestamps are not manually annotated. Compare the reference with audio before using it as human-labelled ground truth.",
+  "question": "Kể về một lần bạn giải quyết vấn đề khó trong dự án.",
+  "role": "Software Engineer",
+  "cases": [
+    {
+      "id": "answer_vi_01",
+      "category": "complete_star",
+      "audio": "answer_vi_01.webm",
+      "reference": "answer_vi_01.txt",
+      "duration_seconds": 26.515,
+      "bytes": 107436,
+      "expected_fillers_in_reference": {
+        "filler_words_count": 0,
+        "filler_words": {}
+      },
+      "llm_expectation": "STAR đầy đủ; nhận xét dựa trên hành động và kết quả đã nêu."
+    },
+    {
+      "id": "answer_vi_02",
+      "category": "fillers_and_unmeasured_result",
+      "audio": "answer_vi_02.webm",
+      "reference": "answer_vi_02.txt",
+      "duration_seconds": 27.88,
+      "bytes": 107669,
+      "expected_fillers_in_reference": {
+        "filler_words_count": 8,
+        "filler_words": {
+          "ừm": 2,
+          "à": 2,
+          "ờ": 1,
+          "uhm": 1,
+          "kiểu như": 1,
+          "thì là": 1
+        }
+      },
+      "llm_expectation": "Nhận diện từ đệm; góp ý thiếu số liệu kết quả; không trừ content_score chỉ vì từ đệm."
+    },
+    {
+      "id": "answer_vi_03",
+      "category": "incomplete_result",
+      "audio": "answer_vi_03.webm",
+      "reference": "answer_vi_03.txt",
+      "duration_seconds": 18.575,
+      "bytes": 75006,
+      "expected_fillers_in_reference": {
+        "filler_words_count": 0,
+        "filler_words": {}
+      },
+      "llm_expectation": "Góp ý hành động chưa rõ và kết quả chưa được xác minh; không bịa kết quả."
+    }
+  ]
+}
