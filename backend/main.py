@@ -36,6 +36,31 @@ from backend.api.agents import router as agents_router
 # Tự động ánh xạ và tạo bảng nếu chưa có
 Base.metadata.create_all(bind=engine)
 
+
+def add_missing_columns():
+    """create_all không sửa bảng đã tồn tại: tự thêm các cột còn thiếu (DB cũ trên Render/PostgreSQL)."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue
+        present = {c["name"] for c in inspector.get_columns(table.name)}
+        for col in table.columns:
+            if col.name in present:
+                continue
+            col_type = col.type.compile(dialect=engine.dialect)
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col_type}'))
+                print(f"Added missing column {table.name}.{col.name}")
+            except Exception as exc:
+                print(f"Could not add column {table.name}.{col.name}: {exc}")
+
+
+add_missing_columns()
+
 app = FastAPI(
     title="AI Mock Interview Platform API",
     description="Backend API cho Nền tảng Phỏng vấn thử Đa phương thức (FER + Groq Whisper + Gemini)",
