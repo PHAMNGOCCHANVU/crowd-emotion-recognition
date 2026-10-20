@@ -52,15 +52,17 @@ def get_current_admin_user(
     """
     Xác thực quyền Quản trị viên (ADMIN)
     """
+    explicit_credentials_provided = bool(x_user_id or authorization)
     user = None
     if x_user_id:
-        user = db.query(User).filter((User.id == x_user_id) & (User.role == "ADMIN")).first()
+        user = db.query(User).filter(User.id == x_user_id).first()
 
     if not user and authorization:
         token = authorization.replace("Bearer ", "").strip()
-        user = db.query(User).filter(((User.id == token) | (User.email == token)) & (User.role == "ADMIN")).first()
+        user = db.query(User).filter((User.id == token) | (User.email == token)).first()
 
-    if not user:
+    if not user and not explicit_credentials_provided:
+        # Chỉ fallback về admin_123 khi không có thông tin xác thực nào được gửi lên (chế độ dev local)
         user = db.query(User).filter(User.id == "admin_123").first()
         if not user:
             user = db.query(User).filter(User.role == "ADMIN").first()
