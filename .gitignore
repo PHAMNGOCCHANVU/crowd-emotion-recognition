@@ -107,3 +107,11 @@ artifacts/
 !tests/fixtures/answer_vi_01.webm
 !tests/fixtures/answer_vi_02.webm
 !tests/fixtures/answer_vi_03.webm
+
+AGENTS.md
+project-context.md
+.ai-agents/
+.antigravityignore
+.clineignore
+plan/
+tests/
