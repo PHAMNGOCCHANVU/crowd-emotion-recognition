@@ -116,3 +116,6 @@ project-context.md
 .clineignore
 plan/
 tests/
+!backend/tests/
+backend/tests/*
+!backend/tests/test_fer_unicode.py

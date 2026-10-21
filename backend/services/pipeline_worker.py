@@ -79,7 +79,12 @@ def process_answer_in_background(
             speech_results = transcribe_audio_whisper(temp_video_path)
         except ServiceError as se:
             logger.warning("Whisper transcription error (%s): %s", se.code, se)
-            if se.code in ("invalid_speech_response", "invalid_duration", "invalid_media"):
+            if se.code in (
+                "invalid_speech_response",
+                "unreliable_transcript",
+                "invalid_duration",
+                "invalid_media",
+            ):
                 speech_results = {
                     "transcript": "",
                     "filler_words_count": 0,
