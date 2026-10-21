@@ -1,7 +1,7 @@
-from typing import List, Optional, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field
+from typing import Any
 
+from pydantic import BaseModel, Field
 
 # ==========================================
 # CÁC SCHEMAS PHỤC VỤ PHỎNG VẤN CỐT LÕI (CORE INTERVIEW)
@@ -14,19 +14,19 @@ class QuestionItem(BaseModel):
 
 
 class SessionStartRequest(BaseModel):
-    user_id: Optional[str] = "guest_user"
+    user_id: str | None = "guest_user"
     role_name: str = Field(..., description="Vị trí ứng tuyển (Software Engineer, Sales, HR, etc.)")
-    jd_text: Optional[str] = None
-    level: Optional[str] = Field("fresher", description="Cấp độ: intern, fresher, junior, mid, senior")
-    question_ids: Optional[List[str]] = Field(None, description="Danh sách ID câu hỏi chọn trước")
+    jd_text: str | None = None
+    level: str | None = Field("fresher", description="Cấp độ: intern, fresher, junior, mid, senior")
+    question_ids: list[str] | None = Field(None, description="Danh sách ID câu hỏi chọn trước")
 
 
 class SessionStartResponse(BaseModel):
     session_id: str
     role_name: str
-    level: Optional[str] = "fresher"
+    level: str | None = "fresher"
     total_questions: int
-    questions: List[QuestionItem]
+    questions: list[QuestionItem]
     created_at: str
 
 
@@ -45,19 +45,19 @@ class QuestionStatusItem(BaseModel):
 class SessionStatusResponse(BaseModel):
     session_id: str
     overall_status: str
-    questions: List[QuestionStatusItem]
+    questions: list[QuestionStatusItem]
     is_fully_completed: bool
 
 
 class QuestionResultDetail(BaseModel):
     order_index: int
     question_text: str
-    transcript: Optional[str] = ""
+    transcript: str | None = ""
     filler_words_count: int = 0
-    metrics: Dict[str, float]
-    emotion_timeline: List[Dict[str, Any]] = []
-    ai_feedback: Dict[str, Any] = {}
-    video_url: Optional[str] = None
+    metrics: dict[str, float]
+    emotion_timeline: list[dict[str, Any]] = []
+    ai_feedback: dict[str, Any] = {}
+    video_url: str | None = None
 
 
 class SessionSummary(BaseModel):
@@ -73,7 +73,7 @@ class SessionResultResponse(BaseModel):
     session_id: str
     role_name: str
     summary: SessionSummary
-    details: List[QuestionResultDetail]
+    details: list[QuestionResultDetail]
 
 
 class ChatRequest(BaseModel):
@@ -83,7 +83,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     session_id: str
     response: str
-    tools_used: List[str] = []
+    tools_used: list[str] = []
     is_mock: bool = False
     timestamp: str
 
@@ -95,14 +95,14 @@ class ChatResponse(BaseModel):
 class SessionHistoryItem(BaseModel):
     session_id: str
     role_name: str
-    level: Optional[str] = "fresher"
+    level: str | None = "fresher"
     overall_score: float
     content_score: float = 0.0
     voice_score: float = 0.0
     expression_score: float = 0.0
     filler_count: int = 0
     stress_level: str = "low"
-    feedback: Optional[str] = ""
+    feedback: str | None = ""
     created_at: str
 
     class Config:
@@ -113,10 +113,10 @@ class PositionItem(BaseModel):
     id: str
     title: str
     field: str
-    skills: List[str] = []
+    skills: list[str] = []
     duration: str = "3–6 tháng"
     icon: str = "server"
-    levels: List[str] = ["intern", "fresher", "junior", "mid", "senior"]
+    levels: list[str] = ["intern", "fresher", "junior", "mid", "senior"]
 
 
 class QuestionDetailItem(BaseModel):
@@ -124,29 +124,29 @@ class QuestionDetailItem(BaseModel):
     category: str
     question_text: str
     time_limit_seconds: int = 120
-    level: Optional[str] = "junior"
+    level: str | None = "junior"
     source: str = "DEFAULT"
-    created_at: Optional[str] = None
+    created_at: str | None = None
 
 
 class QuestionListResponse(BaseModel):
     position_id: str
     level: str
     total: int
-    questions: List[QuestionDetailItem]
+    questions: list[QuestionDetailItem]
 
 
 class GenerateQuestionsRequest(BaseModel):
     position_id: str = Field(..., description="Mã vị trí (VD: backend, frontend)")
     level: str = Field(..., description="Cấp độ: intern, fresher, junior, mid, senior")
-    jd_text: str = Field(..., min_length=20, max_length=10000, description="Mô tả công việc tối thiểu 20 ký tự")
+    jd_text: str = Field(..., min_length=15, max_length=150000, description="Mô tả công việc tối đa 10.000 từ")
 
 
 class GenerateQuestionsResponse(BaseModel):
     status: str = "success"
     message: str
     generated_count: int
-    questions: List[QuestionDetailItem]
+    questions: list[QuestionDetailItem]
 
 
 # ==========================================
@@ -159,15 +159,17 @@ class AgentMessageItem(BaseModel):
 
 
 class AgentChatRequest(BaseModel):
-    conversation_id: Optional[str] = None
+    conversation_id: str | None = None
+    session_id: str | None = Field(None, description="Mã phiên phỏng vấn cụ thể (nếu đang phân tích trong một phiên)")
     message: str = Field(..., description="Nội dung câu hỏi gửi AI Advisor")
-    history: Optional[List[AgentMessageItem]] = []
+    history: list[AgentMessageItem] | None = []
 
 
 class AgentChatResponse(BaseModel):
     reply: str
-    suggestions: List[str] = []
-    conversation_id: Optional[str] = None
+    suggestions: list[str] = []
+    conversation_id: str | None = None
+    tools_used: list[str] = []
 
 
 class AgentConversationResponse(BaseModel):
@@ -175,7 +177,7 @@ class AgentConversationResponse(BaseModel):
     title: str
     created_at: datetime
     updated_at: datetime
-    messages: List[AgentMessageItem] = []
+    messages: list[AgentMessageItem] = []
 
     class Config:
         from_attributes = True
@@ -187,12 +189,12 @@ class AgentConversationResponse(BaseModel):
 
 class SegmentBase(BaseModel):
     name: str = Field(..., description="Tên phân khúc")
-    code: Optional[str] = Field(None, description="Mã định danh")
-    description: Optional[str] = None
+    code: str | None = Field(None, description="Mã định danh")
+    description: str | None = None
     industry_id: str
     position_id: str
-    status: Optional[str] = "ACTIVE"
-    sort_order: Optional[int] = 0
+    status: str | None = "ACTIVE"
+    sort_order: int | None = 0
 
 
 class SegmentCreate(SegmentBase):
@@ -200,13 +202,13 @@ class SegmentCreate(SegmentBase):
 
 
 class SegmentUpdate(BaseModel):
-    name: Optional[str] = None
-    code: Optional[str] = None
-    description: Optional[str] = None
-    industry_id: Optional[str] = None
-    position_id: Optional[str] = None
-    status: Optional[str] = None
-    sort_order: Optional[int] = None
+    name: str | None = None
+    code: str | None = None
+    description: str | None = None
+    industry_id: str | None = None
+    position_id: str | None = None
+    status: str | None = None
+    sort_order: int | None = None
 
 
 class SegmentResponse(SegmentBase):
@@ -227,7 +229,7 @@ class AttemptSummaryResponse(BaseModel):
     id: str
     test_id: str
     started_at: datetime
-    completed_at: Optional[datetime]
+    completed_at: datetime | None
     total_score: float
     max_score: float
     status: str
@@ -238,9 +240,9 @@ class AttemptSummaryResponse(BaseModel):
 
 class AttemptAnswerDetail(BaseModel):
     question_id: str
-    user_answer: Optional[str]
-    correct_answer_snapshot: Optional[str]
-    is_correct: Optional[bool]
+    user_answer: str | None
+    correct_answer_snapshot: str | None
+    is_correct: bool | None
     score: float
     max_score: float
 
@@ -254,8 +256,8 @@ class AttemptSectionDetail(BaseModel):
 
 
 class AttemptFullDetailResponse(AttemptSummaryResponse):
-    sections: List[AttemptSectionDetail]
-    answers: List[AttemptAnswerDetail]
+    sections: list[AttemptSectionDetail]
+    answers: list[AttemptAnswerDetail]
 
 
 class IndustryCreate(BaseModel):
@@ -266,17 +268,17 @@ class IndustryCreate(BaseModel):
 class PositionCreate(BaseModel):
     industry_id: str
     name: str
-    code: Optional[str] = None
-    skills: Optional[List[str]] = None
-    duration: Optional[str] = "3–6 tháng"
-    icon: Optional[str] = "server"
+    code: str | None = None
+    skills: list[str] | None = None
+    duration: str | None = "3–6 tháng"
+    icon: str | None = "server"
 
 
 class UserProfileResponse(BaseModel):
     id: str
     email: str
     full_name: str
-    phone_number: Optional[str]
+    phone_number: str | None
     role: str
 
     class Config:
@@ -284,10 +286,10 @@ class UserProfileResponse(BaseModel):
 
 
 class UserProfileUpdate(BaseModel):
-    full_name: Optional[str] = Field(
+    full_name: str | None = Field(
         None, min_length=2, description="Họ và tên"
     )
-    phone_number: Optional[str] = Field(None, description="Số điện thoại")
+    phone_number: str | None = Field(None, description="Số điện thoại")
 
 
 class ChangePasswordRequest(BaseModel):
@@ -315,47 +317,47 @@ class AdminDashboardStats(BaseModel):
     total_sessions: int
     completion_rate: float
     average_score: float
-    recent_sessions: List[AdminRecentSessionItem] = []
+    recent_sessions: list[AdminRecentSessionItem] = []
 
 
 class AdminUserListItem(BaseModel):
     id: str
     email: str
     full_name: str
-    phone_number: Optional[str] = None
+    phone_number: str | None = None
     role: str
     session_count: int = 0
     average_score: float = 0.0
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
 
 class IndustryUpdate(BaseModel):
-    name: Optional[str] = None
-    code: Optional[str] = None
+    name: str | None = None
+    code: str | None = None
 
 
 class PositionUpdate(BaseModel):
-    name: Optional[str] = None
-    code: Optional[str] = None
-    industry_id: Optional[str] = None
-    skills: Optional[List[str]] = None
-    duration: Optional[str] = None
-    icon: Optional[str] = None
+    name: str | None = None
+    code: str | None = None
+    industry_id: str | None = None
+    skills: list[str] | None = None
+    duration: str | None = None
+    icon: str | None = None
 
 
 class QuestionCreateAdmin(BaseModel):
     position_id: str
-    category: Optional[str] = "Chuyên môn"
+    category: str | None = "Chuyên môn"
     question_text: str
-    time_limit_seconds: Optional[int] = 120
-    level: Optional[str] = "junior"
-    levels: Optional[List[str]] = None
+    time_limit_seconds: int | None = 120
+    level: str | None = "junior"
+    levels: list[str] | None = None
 
 
 class QuestionUpdateAdmin(BaseModel):
-    category: Optional[str] = None
-    question_text: Optional[str] = None
-    time_limit_seconds: Optional[int] = None
-    level: Optional[str] = None
-    levels: Optional[List[str]] = None
+    category: str | None = None
+    question_text: str | None = None
+    time_limit_seconds: int | None = None
+    level: str | None = None
+    levels: list[str] | None = None
 

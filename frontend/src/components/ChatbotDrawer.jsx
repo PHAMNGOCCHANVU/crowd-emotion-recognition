@@ -30,7 +30,7 @@ const formatDate = (iso) =>
   });
 const makeTitle = (text) => (text.length > 36 ? `${text.slice(0, 36)}…` : text);
 
-export default function ChatbotDrawer({ isOpen, onClose }) {
+export default function ChatbotDrawer({ isOpen, onClose, sessionId = null }) {
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [draft, setDraft] = useState(null);
@@ -106,6 +106,7 @@ export default function ChatbotDrawer({ isOpen, onClose }) {
     try {
       const res = await api.chatWithAgent({
         conversationId: userConv.id,
+        sessionId,
         message: content,
         history: base.messages,
       });

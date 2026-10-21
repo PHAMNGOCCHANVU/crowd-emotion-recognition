@@ -74,7 +74,8 @@ export default function PracticePage({ onStartInterview }) {
   // Xử lý AI sinh câu hỏi từ JD
   const handleGenerate = async (e) => {
     e.preventDefault();
-    if (!jdRole || !jdLevel || jdText.trim().length < 20 || isGenerating) return;
+    const words = jdText.trim() ? jdText.trim().split(/\s+/).length : 0;
+    if (!jdRole || !jdLevel || words < 5 || words > 10000 || isGenerating) return;
 
     setIsGenerating(true);
     setGenMessage({ type: '', text: '' });
@@ -366,41 +367,60 @@ export default function PracticePage({ onStartInterview }) {
                 <div className="step-content">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <label style={{ margin: 0 }}>Dán toàn bộ nội dung Mô tả Công việc (JD)</label>
-                    <span className={`char-counter ${jdText.trim().length >= 20 ? 'valid' : 'invalid'}`}>
-                      {jdText.trim().length} / tối thiểu 20 ký tự
-                    </span>
+                    {(() => {
+                      const count = jdText.trim() ? jdText.trim().split(/\s+/).length : 0;
+                      const isValid = count >= 5 && count <= 10000;
+                      return (
+                        <span className={`char-counter ${isValid ? 'valid' : 'invalid'}`}>
+                          {count === 0
+                            ? '0 / 10.000 từ (Tối thiểu 5 từ)'
+                            : count < 5
+                            ? `${count} từ (Cần thêm tối thiểu ${5 - count} từ)`
+                            : count > 10000
+                            ? `⚠️ Vượt quá 10.000 từ (${count.toLocaleString()}/10.000 từ)`
+                            : `✓ ${count.toLocaleString()} / 10.000 từ`}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <textarea
-                    rows={7}
+                    rows={8}
                     value={jdText}
                     onChange={(e) => setJdText(e.target.value)}
                     disabled={isGenerating}
-                    placeholder="Ví dụ: Tuyển dụng Backend Engineer (FastAPI/Python, PostgreSQL, Redis, Docker, Git). Yêu cầu ứng viên có tư duy hệ thống tốt, hiểu biết về RESTful API và tối ưu hóa truy vấn..."
+                    placeholder="Dán toàn bộ nội dung tuyển dụng (JD) tại đây (hỗ trợ tài liệu dài lên tới 10.000 từ)... Ví dụ: Tuyển dụng Backend Engineer (FastAPI/Python, PostgreSQL, Redis, Docker, Git). Yêu cầu ứng viên có tư duy hệ thống tốt, hiểu biết về RESTful API và tối ưu hóa truy vấn..."
                     className="jd-textarea"
+                    style={{ minHeight: 180, resize: 'vertical' }}
                   />
                   <small className="form-hint">
-                    💡 Mẹo: Dán chi tiết phần "Yêu cầu ứng viên" và "Mô tả công việc" để AI sinh các câu hỏi tình huống và chuyên môn sát thực tế nhất.
+                    💡 Mẹo: Hệ thống hỗ trợ tài liệu JD dài lên tới <strong>10.000 từ</strong>. Hãy dán chi tiết phần "Yêu cầu ứng viên" và "Mô tả công việc" để AI sinh các câu hỏi tình huống và chuyên môn sát thực tế nhất.
                   </small>
                 </div>
               </div>
 
               {/* Action Trigger */}
               <div className="jd-action-row">
-                <button
-                  type="submit"
-                  disabled={!jdRole || !jdLevel || jdText.trim().length < 20 || isGenerating}
-                  className="primary-button jd-submit-btn"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="spinner" size={18} /> Đang phân tích JD và sinh câu hỏi...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={18} /> AI Sinh câu hỏi từ JD
-                    </>
-                  )}
-                </button>
+                {(() => {
+                  const count = jdText.trim() ? jdText.trim().split(/\s+/).length : 0;
+                  const isReady = jdRole && jdLevel && count >= 5 && count <= 10000 && !isGenerating;
+                  return (
+                    <button
+                      type="submit"
+                      disabled={!isReady}
+                      className="primary-button jd-submit-btn"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="spinner" size={18} /> Đang phân tích JD và sinh câu hỏi...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={18} /> AI Sinh câu hỏi từ JD ({count > 0 ? `${count.toLocaleString()} từ` : 'Tối đa 10.000 từ'})
+                        </>
+                      )}
+                    </button>
+                  );
+                })()}
               </div>
             </form>
           </div>

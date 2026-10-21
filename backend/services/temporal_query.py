@@ -6,7 +6,8 @@ từ database SQLite / PostgreSQL JSONB để phục vụ Chatbot và Báo cáo.
 """
 
 from collections import Counter
-from typing import Dict, Any, List, Optional
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from ..models import InterviewSession, SessionDetail
@@ -20,7 +21,7 @@ def query_emotion_by_time(
     order_index: int,
     start_second: int,
     end_second: int,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Truy vấn diễn biến cảm xúc trong khoảng thời gian [start_second, end_second]
     của câu hỏi có số thứ tự order_index.
@@ -104,7 +105,7 @@ def get_session_summary(
     db: Session,
     session_id: str,
     include_timeline: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Lấy tổng quan kết quả phỏng vấn toàn bộ phiên làm việc.
     """
@@ -161,7 +162,7 @@ def compare_questions(
     session_id: str,
     question_a: int,
     question_b: int,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     So sánh các chỉ số cảm xúc và phong thái giữa 2 câu hỏi trong cùng một phiên.
     """
@@ -219,3 +220,99 @@ def compare_questions(
             "stress_delta": abs(stress_diff),
         },
     }
+
+
+def get_candidate_global_summary(db: Session, user_id: str) -> dict[str, Any]:
+    """
+    Trích xuất tổng hợp quá trình luyện tập phỏng vấn của ứng viên (Global Context).
+    """
+    sessions = (
+        db.query(InterviewSession)
+        .filter(InterviewSession.user_id == user_id)
+        .order_by(InterviewSession.created_at.desc())
+        .all()
+    )
+    total_sessions = len(sessions)
+    if total_sessions == 0:
+        return {
+            "user_id": user_id,
+            "total_sessions": 0,
+            "has_data": False,
+            "summary_text": "Ứng viên chưa hoàn thành buổi phỏng vấn thử nào.",
+            "recent_sessions": [],
+        }
+
+    scores = [s.overall_score for s in sessions if s.overall_score is not None]
+    avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
+
+    confidences = [s.confidence_avg for s in sessions if s.confidence_avg is not None]
+    avg_confidence = round(sum(confidences) / len(confidences), 1) if confidences else 0.0
+
+    stresses = [s.stress_avg for s in sessions if s.stress_avg is not None]
+    avg_stress = round(sum(stresses) / len(stresses), 1) if stresses else 0.0
+
+    roles = [s.role_name for s in sessions if s.role_name]
+    latest_role = roles[0] if roles else "Chưa xác định"
+    unique_roles = list(dict.fromkeys(roles))
+
+    recent = []
+    for s in sessions[:5]:
+        recent.append({
+            "id": s.id,
+            "session_id": s.id,
+            "role_name": s.role_name,
+            "level": s.level or "fresher",
+            "overall_score": round(s.overall_score or 0.0, 1),
+            "status": s.status,
+            "date": s.created_at.strftime("%d/%m/%Y") if s.created_at else "",
+            "created_at": s.created_at.isoformat() if s.created_at else "",
+        })
+
+    return {
+        "user_id": user_id,
+        "total_sessions": total_sessions,
+        "has_data": True,
+        "average_score": avg_score,
+        "average_overall_score": avg_score,
+        "average_confidence": avg_confidence,
+        "average_stress": avg_stress,
+        "latest_role": latest_role,
+        "practiced_roles": unique_roles,
+        "recent_sessions": recent,
+    }
+
+
+def get_question_critique_data(db: Session, session_id: str, order_index: int) -> dict[str, Any]:
+    """
+    Lấy chi tiết transcript và nhận xét AI của câu hỏi order_index trong session_id.
+    """
+    detail = (
+        db.query(SessionDetail)
+        .filter(
+            SessionDetail.session_id == session_id,
+            SessionDetail.order_index == order_index,
+        )
+        .first()
+    )
+    if not detail:
+        return {"error": f"Không tìm thấy câu hỏi số {order_index} trong phiên này."}
+
+    feedback = detail.ai_feedback or {}
+    return {
+        "success": True,
+        "session_id": session_id,
+        "order_index": order_index,
+        "question_text": detail.question_text,
+        "transcript": detail.transcript or "",
+        "filler_words_count": detail.filler_words_count or 0,
+        "confidence_score": detail.confidence_score or 0.0,
+        "stress_score": detail.stress_score or 0.0,
+        "content_score": detail.content_score or 0.0,
+        "content_critique": feedback.get("content_critique", ""),
+        "delivery_critique": feedback.get("delivery_critique", ""),
+        "suggested_answer": feedback.get("suggested_answer", ""),
+        "content_feedback": feedback.get("content_critique", ""),
+        "delivery_feedback": feedback.get("delivery_critique", ""),
+        "sample_answer": feedback.get("suggested_answer", ""),
+    }
+

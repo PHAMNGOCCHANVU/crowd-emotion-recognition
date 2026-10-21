@@ -4,7 +4,7 @@ import AdminDashboard from './AdminDashboard';
 import AdminUsers from './AdminUsers';
 import AdminInterviews from './AdminInterviews';
 
-export default function AdminLayout({ currentRoute, onNavigate }) {
+export default function AdminLayout({ currentRoute, onNavigate, onLogout }) {
   const navItems = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
     { name: 'Quản lý Ứng viên', path: '/admin/users', icon: Users },
@@ -48,21 +48,43 @@ export default function AdminLayout({ currentRoute, onNavigate }) {
         </div>
         <div style={{ padding: '16px 12px', borderTop: '1px solid #1e293b' }}>
           <button 
-            onClick={() => onNavigate('/')}
+            onClick={onLogout}
             style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '15px', fontWeight: 500 }}
           >
-            <LogOut size={18} /> Về trang chủ Client
+            <LogOut size={18} /> Đăng xuất
           </button>
         </div>
       </div>
 
       {/* Main Content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <header style={{ height: '70px', background: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', padding: '0 32px', justifyContent: 'flex-end' }}>
+        <header style={{ height: '70px', background: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', padding: '0 32px', justifyContent: 'flex-end', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '14px', fontWeight: 600, color: '#475569' }}>Admin Manager</span>
             <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#3b82f6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>A</div>
           </div>
+          <button
+            onClick={onLogout}
+            title="Đăng xuất khỏi trang Admin"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: '8px',
+              border: '1px solid #fecaca',
+              background: '#fef2f2',
+              color: '#ef4444',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.background = '#fee2e2'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = '#fef2f2'; }}
+          >
+            <LogOut size={15} /> Đăng xuất
+          </button>
         </header>
         <main style={{ flex: 1, padding: '32px', overflowY: 'auto' }}>
           {renderContent()}

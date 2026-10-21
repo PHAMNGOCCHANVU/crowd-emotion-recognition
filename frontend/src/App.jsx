@@ -106,6 +106,7 @@ export default function App() {
     setCurrentPage('setup');
     setActiveSection('home');
     setIsChatOpen(false);
+    setPublicPage('login');
     navigate('/login');
   };
 
@@ -272,18 +273,6 @@ export default function App() {
     ['profile', 'Hồ sơ', UserRound],
   ];
 
-  if (route.startsWith('/admin')) {
-    return (
-      <AdminLayout
-        currentRoute={route}
-        onNavigate={(path) => {
-          window.history.pushState({}, '', path);
-          setRoute(path);
-        }}
-      />
-    );
-  }
-
   if (!user) {
     if (route === '/' || route === '/home') {
       return (
@@ -373,6 +362,19 @@ export default function App() {
     );
   }
 
+  if (route.startsWith('/admin')) {
+    return (
+      <AdminLayout
+        currentRoute={route}
+        onNavigate={(path) => {
+          window.history.pushState({}, '', path);
+          setRoute(path);
+        }}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   return (
     <div className="app-shell">
       {/* Global Header */}
@@ -434,6 +436,7 @@ export default function App() {
       <ChatbotDrawer
         isOpen={isChatOpen && !isInterviewing}
         onClose={() => setIsChatOpen(false)}
+        sessionId={sessionData?.id || sessionData?.session_id || null}
       />
     </div>
   );

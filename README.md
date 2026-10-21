@@ -152,7 +152,7 @@ Sau khi đã cấu hình `DATABASE_URL` (hoặc để hệ thống dùng SQLite 
 cd ..
 
 # Môi trường đã kích hoạt là backend/.venv
-python backend/init_db.py
+.\.venv\Scripts\python.exe init_db.py
 ```
 
 Script sẽ nạp toàn bộ SQLAlchemy models, tạo các bảng còn thiếu và kiểm tra cột `video_url` trong bảng `session_details`. Có thể chạy lại lệnh này an toàn khi cần đồng bộ schema hiện tại.

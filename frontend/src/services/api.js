@@ -171,11 +171,12 @@ export const api = {
     ),
 
   // POST /agents/chat
-  chatWithAgent: ({ conversationId, message, history = [] }) =>
+  chatWithAgent: ({ conversationId, sessionId = null, message, history = [] }) =>
     withMock(
       async () => {
         const res = await axios.post(`${API_BASE}/agents/chat`, {
           conversation_id: conversationId,
+          session_id: sessionId,
           message,
           history,
         });

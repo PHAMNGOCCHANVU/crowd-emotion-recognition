@@ -1,15 +1,14 @@
 import json
 import os
-import re
 import uuid
 from datetime import datetime
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from backend import models
+
 from ..database import get_db
-import backend.models as models
 from ..schemas import (
     GenerateQuestionsRequest,
     GenerateQuestionsResponse,
@@ -50,7 +49,7 @@ DEFAULT_QUESTIONS = {
 }
 
 
-def get_questions_for_role(role_name: str, jd_text: str = None) -> List[QuestionItem]:
+def get_questions_for_role(role_name: str, jd_text: str = None) -> list[QuestionItem]:
     """Lấy danh sách 3 câu hỏi phù hợp theo ngành hoặc JD (tương thích ngược)."""
     questions = DEFAULT_QUESTIONS.get(role_name, DEFAULT_QUESTIONS["Software Engineer"])
     return [
@@ -59,15 +58,15 @@ def get_questions_for_role(role_name: str, jd_text: str = None) -> List[Question
     ]
 
 
-@router.get("/roles", response_model=List[str])
+@router.get("/roles", response_model=list[str])
 def list_available_roles():
     """Lấy danh sách các vị trí phỏng vấn có sẵn (tương thích ngược)."""
     return list(DEFAULT_QUESTIONS.keys())
 
 
-@router.get("/positions", response_model=List[PositionItem])
+@router.get("/positions", response_model=list[PositionItem])
 def list_positions(
-    level: Optional[str] = Query(None, description="Lọc theo level: intern, fresher, junior, mid, senior"),
+    level: str | None = Query(None, description="Lọc theo level: intern, fresher, junior, mid, senior"),
     db: Session = Depends(get_db),
 ):
     """
@@ -111,7 +110,7 @@ def list_positions(
 
 def _generate_offline_questions_from_jd(
     position_name: str, level: str, jd_text: str
-) -> List[dict]:
+) -> list[dict]:
     """Sinh câu hỏi dự phòng từ JD dựa trên phân tích từ khóa khi không có LLM."""
     common_tech_keywords = [
         "python", "fastapi", "django", "flask", "nodejs", "javascript", "typescript",
@@ -145,8 +144,8 @@ def _generate_offline_questions_from_jd(
 @router.get("", response_model=QuestionListResponse)
 def list_questions(
     position_id: str = Query(..., description="Mã vị trí (VD: backend, frontend)"),
-    level: Optional[str] = Query(None, description="Cấp độ lọc câu hỏi"),
-    source: Optional[str] = Query(None, description="Nguồn câu hỏi: DEFAULT hoặc Q-JD (bỏ trống hoặc all để lấy tất cả)"),
+    level: str | None = Query(None, description="Cấp độ lọc câu hỏi"),
+    source: str | None = Query(None, description="Nguồn câu hỏi: DEFAULT hoặc Q-JD (bỏ trống hoặc all để lấy tất cả)"),
     db: Session = Depends(get_db),
 ):
     """
@@ -164,9 +163,7 @@ def list_questions(
     for q in all_qs:
         if level and level.strip().lower() != "all":
             lvl_clean = level.strip().lower()
-            if q.levels and lvl_clean in [l.lower() for l in q.levels]:
-                matched_qs.append(q)
-            elif q.level and q.level.lower() == lvl_clean:
+            if q.levels and lvl_clean in [l.lower() for l in q.levels] or q.level and q.level.lower() == lvl_clean:
                 matched_qs.append(q)
         else:
             matched_qs.append(q)
@@ -225,16 +222,22 @@ def generate_questions_from_jd(
             detail=f"Level không hợp lệ. Phải thuộc một trong các cấp: {', '.join(valid_levels)}.",
         )
 
-    # 3. Kiểm tra jd_text
+    # 3. Kiểm tra jd_text (Hỗ trợ tài liệu dài lên tới 10.000 từ)
     jd_clean = payload.jd_text.strip()
-    if len(jd_clean) < 20:
+    word_count = len(jd_clean.split())
+    if len(jd_clean) < 15 or word_count < 5:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Mô tả công việc (JD) phải có tối thiểu 20 ký tự.",
+            detail="Mô tả công việc (JD) quá ngắn. Vui lòng nhập tối thiểu 5 từ để AI có đủ ngữ cảnh.",
+        )
+    if word_count > 10000:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Mô tả công việc (JD) vượt quá giới hạn 10.000 từ (hiện tại có {word_count:,} từ).",
         )
 
     # 4. Sinh câu hỏi từ JD (Ưu tiên Gemini Flash, Fallback sang Offline generator)
-    raw_questions: List[dict] = []
+    raw_questions: list[dict] = []
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 
     if gemini_key:
@@ -277,7 +280,7 @@ def generate_questions_from_jd(
         )
 
     # 5. Lưu câu hỏi vào CSDL
-    created_questions: List[models.Question] = []
+    created_questions: list[models.Question] = []
     for item in raw_questions[:4]:
         q_text = item.get("question_text", "").strip()
         if not q_text:
