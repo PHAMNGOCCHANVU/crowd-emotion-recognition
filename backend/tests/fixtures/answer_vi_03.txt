@@ -1,1 +1,0 @@
-Trong một bài tập nhóm, em thấy trang kết quả tải chậm. Em phụ trách phần backend nên mở mã nguồn để kiểm tra. Em thử sửa vài truy vấn rồi nhờ một bạn chạy lại. Sau đó nhóm tiếp tục làm các chức năng khác. Em chưa đo thời gian phản hồi và chưa kiểm tra xem những thay đổi đó có giải quyết được vấn đề ban đầu hay không.
