@@ -127,17 +127,28 @@ export const api = {
       () => mockListPositions(level)
     ),
 
-  // GET /questions?position_id=backend&level=fresher
-  getQuestions: ({ positionId, level }) =>
+  // GET /questions?position_id=backend&level=fresher&source=DEFAULT
+  getQuestions: ({ positionId, level, source } = {}) =>
     withMock(
       async () => {
-        const res = await axios.get(`${API_BASE}/questions`, {
-          params: { position_id: positionId, level },
-        });
+        const params = { position_id: positionId };
+        if (level) params.level = level;
+        if (source) params.source = source;
+        const res = await axios.get(`${API_BASE}/questions`, { params });
         return ensure(res.data, (d) => Array.isArray(d?.questions));
       },
       () => mockListQuestions(positionId, level)
     ),
+
+  // POST /questions/generate-from-jd
+  generateQuestionsFromJD: async ({ positionId, level, jdText }) => {
+    const res = await axios.post(`${API_BASE}/questions/generate-from-jd`, {
+      position_id: positionId,
+      level,
+      jd_text: jdText,
+    });
+    return res.data;
+  },
 
   // GET /sessions/history
   getSessionHistory: () =>

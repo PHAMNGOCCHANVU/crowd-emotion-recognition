@@ -124,12 +124,28 @@ class QuestionDetailItem(BaseModel):
     category: str
     question_text: str
     time_limit_seconds: int = 120
+    level: Optional[str] = "junior"
+    source: str = "DEFAULT"
+    created_at: Optional[str] = None
 
 
 class QuestionListResponse(BaseModel):
     position_id: str
     level: str
     total: int
+    questions: List[QuestionDetailItem]
+
+
+class GenerateQuestionsRequest(BaseModel):
+    position_id: str = Field(..., description="Mã vị trí (VD: backend, frontend)")
+    level: str = Field(..., description="Cấp độ: intern, fresher, junior, mid, senior")
+    jd_text: str = Field(..., min_length=20, max_length=10000, description="Mô tả công việc tối thiểu 20 ký tự")
+
+
+class GenerateQuestionsResponse(BaseModel):
+    status: str = "success"
+    message: str
+    generated_count: int
     questions: List[QuestionDetailItem]
 
 

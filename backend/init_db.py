@@ -58,6 +58,18 @@ def init_database():
                     print("⚡ Bổ sung cột level trong interview_sessions...")
                     conn.execute(text("ALTER TABLE interview_sessions ADD COLUMN level VARCHAR(50) DEFAULT 'junior';"))
                     conn.commit()
+            if "questions" in table_names:
+                columns = [c["name"] for c in inspector.get_columns("questions")]
+                if "source" not in columns:
+                    print("⚡ Bổ sung cột source vào bảng questions...")
+                    conn.execute(text("ALTER TABLE questions ADD COLUMN source VARCHAR(20) DEFAULT 'DEFAULT';"))
+                    conn.commit()
+                if "created_at" not in columns:
+                    print("⚡ Bổ sung cột created_at vào bảng questions...")
+                    conn.execute(text("ALTER TABLE questions ADD COLUMN created_at DATETIME;"))
+                    conn.commit()
+                conn.execute(text("UPDATE questions SET source = 'DEFAULT' WHERE source IS NULL;"))
+                conn.commit()
     except Exception as e:
         print(f"⚠️ Kiểm tra nâng cấp cột: {e}")
 
@@ -333,8 +345,12 @@ def init_database():
                                 time_limit_seconds=120,
                                 level=lvs[0],
                                 levels=lvs,
+                                source="DEFAULT",
+                                created_at=datetime.utcnow(),
                             )
                         )
+                    elif not existing_q.source:
+                        existing_q.source = "DEFAULT"
 
         # 5. Seed 5 Interview Sessions mẫu
         sample_sessions = [
