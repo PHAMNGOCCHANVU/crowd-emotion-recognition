@@ -295,3 +295,67 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(
         ..., min_length=8, description="Mật khẩu mới tối thiểu 8 ký tự"
     )
+
+
+# ==========================================
+# CÁC SCHEMAS PHỤC VỤ ADMIN MANAGEMENT
+# ==========================================
+
+class AdminRecentSessionItem(BaseModel):
+    session_id: str
+    role: str
+    candidate_name: str
+    date: str
+    status: str
+    score: float
+
+
+class AdminDashboardStats(BaseModel):
+    total_users: int
+    total_sessions: int
+    completion_rate: float
+    average_score: float
+    recent_sessions: List[AdminRecentSessionItem] = []
+
+
+class AdminUserListItem(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    phone_number: Optional[str] = None
+    role: str
+    session_count: int = 0
+    average_score: float = 0.0
+    created_at: Optional[datetime] = None
+
+
+class IndustryUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+
+
+class PositionUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    industry_id: Optional[str] = None
+    skills: Optional[List[str]] = None
+    duration: Optional[str] = None
+    icon: Optional[str] = None
+
+
+class QuestionCreateAdmin(BaseModel):
+    position_id: str
+    category: Optional[str] = "Chuyên môn"
+    question_text: str
+    time_limit_seconds: Optional[int] = 120
+    level: Optional[str] = "junior"
+    levels: Optional[List[str]] = None
+
+
+class QuestionUpdateAdmin(BaseModel):
+    category: Optional[str] = None
+    question_text: Optional[str] = None
+    time_limit_seconds: Optional[int] = None
+    level: Optional[str] = None
+    levels: Optional[List[str]] = None
+
