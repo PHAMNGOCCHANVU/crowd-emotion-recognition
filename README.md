@@ -76,6 +76,14 @@ Môi trường Python nằm tại `backend/.venv`, không nằm ở thư mục g
 
 ### 3.2. Khởi chạy Hệ thống MỚI: AI Mock Interview Platform
 
+Trước lần chạy đầu tiên, nạp dữ liệu mẫu cho ngân hàng câu hỏi và vị trí:
+
+```powershell
+# Từ thư mục gốc dự án. Kiểm tra DATABASE_URL trong .env trước khi chạy
+# để chắc chắn seed dữ liệu vào đúng cơ sở dữ liệu mong muốn.
+python backend/init_db.py
+```
+
 Để chạy hệ thống hoàn chỉnh, bạn mở **2 cửa sổ Terminal**:
 
 #### Terminal 1: Khởi chạy Backend FastAPI
