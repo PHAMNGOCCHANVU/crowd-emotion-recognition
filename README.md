@@ -1,6 +1,7 @@
 # 🎙️ AI Mock Interview Platform — Nền Tảng Luyện Phỏng Vấn Thử Thông Minh Đa Phương Thức
 
 Task05 của thành viên B: [cài đặt, hợp đồng Speech/LLM và kiểm thử](backend/SPEECH_LLM.md).
+Sinh câu hỏi bằng AI dựa trên JD: [API backend và luồng tích hợp cho frontend](backend/QUESTION_GENERATION.md).
 > **Đánh giá toàn diện Năng lực Chuyên môn (Verbal) & Phong thái Tự tin (Non-verbal)**  
 > *Dự án phát triển ứng dụng thực tiễn từ Codebase Nhận diện Cảm xúc (Emotion Recognition).*
 
@@ -72,6 +73,12 @@ pip install -r requirements.txt
 
 Môi trường Python nằm tại `backend/.venv`, không nằm ở thư mục gốc của dự án.
 
+Sau khi cập nhật code, cài lại dependency bằng đúng môi trường backend (chạy từ thư mục gốc repo):
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+```
+
 ---
 
 ### 3.2. Khởi chạy Hệ thống MỚI: AI Mock Interview Platform
@@ -79,14 +86,30 @@ Môi trường Python nằm tại `backend/.venv`, không nằm ở thư mục g
 Để chạy hệ thống hoàn chỉnh, bạn mở **2 cửa sổ Terminal**:
 
 #### Terminal 1: Khởi chạy Backend FastAPI
+
+Từ thư mục gốc repo trên Windows, dùng script chọn đúng Python của backend:
+
+```powershell
+.\scripts\start_backend.ps1
+```
+
+Nếu ngân hàng câu hỏi trong database chưa có dữ liệu, dừng backend và nạp riêng câu hỏi trước khi chạy lại:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -X utf8 -m backend.init_db --questions-only
+```
+
+Tùy chọn này nạp ngành, vị trí và câu hỏi có sẵn, giữ các bản ghi hiện có và không thêm tài khoản hoặc kết quả phỏng vấn demo. Cách khởi chạy thủ công tương đương:
+
 ```powershell
 # Từ thư mục gốc d:\emotion_recognition:
 cd backend
 .\.venv\Scripts\Activate.ps1
-python -m uvicorn main:app --reload --port 8000
+python -m uvicorn main:app --host 127.0.0.1 --reload --port 8000
 ```
 * **Tài liệu API tương tác (Swagger UI):** Mở trình duyệt tại **`http://localhost:8000/docs`**
 * Server tự động tạo file cơ sở dữ liệu SQLite tại `backend/interview.db`.
+* Nếu Vite báo `ECONNREFUSED`, kiểm tra terminal backend: server phải khởi động thành công tại cổng 8000. Chạy riêng `npm run dev` chỉ khởi động frontend; dữ liệu vẫn có thể hiển thị nhờ fallback mock khi backend lỗi. Khi dùng PostgreSQL, lệnh nạp dữ liệu ở trên áp dụng cho database được cấu hình trong `DATABASE_URL`.
 
 #### Terminal 2: Khởi chạy Frontend React (Vite)
 ```powershell

@@ -39,6 +39,19 @@ class InterviewSession(Base):
     details = relationship("SessionDetail", back_populates="session", cascade="all, delete-orphan")
 
 
+class GeneratedQuestionSet(Base):
+    """Immutable preview snapshot, kept separate from the reusable question bank."""
+    __tablename__ = "generated_question_sets"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    role_name = Column(String(100), nullable=False)
+    level = Column(String(50), nullable=False)
+    jd_text = Column(Text, nullable=False)
+    questions = Column(JSON, nullable=False)
+    generation_metadata = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class SessionDetail(Base):
     __tablename__ = "session_details"
 

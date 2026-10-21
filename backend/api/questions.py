@@ -1,12 +1,51 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from uuid import uuid4
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 import backend.models as models
 from ..schemas import QuestionItem, PositionItem, QuestionListResponse, QuestionDetailItem
+from ..services.ai_contracts import ServiceError
+from ..services.question_contracts import QuestionGenerationRequest, QuestionGenerationResponse, GeneratedQuestionItem
+from ..services.question_generation_service import generate_interview_questions
 
 router = APIRouter(prefix="/api/questions", tags=["questions"])
+
+
+@router.post("/generate", response_model=QuestionGenerationResponse, status_code=status.HTTP_201_CREATED)
+def generate_questions(req: QuestionGenerationRequest, db: Session = Depends(get_db)):
+    """Generate a JD-first preview; start a session with the returned generated_set_id."""
+    try:
+        generated = generate_interview_questions(req)
+    except ValidationError as exc:
+        raise HTTPException(status_code=503, detail={
+            "code": "invalid_question_generation_settings", "message": "Cấu hình sinh câu hỏi chưa hợp lệ.",
+        }) from exc
+    except ServiceError as exc:
+        status_code = {
+            "missing_question_generation_key": 503,
+            "question_generation_rate_limited": 429,
+            "question_generation_unavailable": 503,
+            "question_generation_api_error": 502,
+            "invalid_generated_questions": 502,
+        }.get(exc.code, 502)
+        raise HTTPException(status_code=status_code, detail={"code": exc.code, "message": str(exc)}) from exc
+
+    items = [GeneratedQuestionItem(id=str(uuid4()), order_index=index, **q)
+             for index, q in enumerate(generated["questions"], 1)]
+    snapshot = models.GeneratedQuestionSet(
+        id=str(uuid4()), role_name=req.role_name, level=req.level, jd_text=req.jd_text,
+        questions=[q.model_dump(mode="json") for q in items], generation_metadata=generated["metadata"],
+    )
+    db.add(snapshot)
+    db.commit()
+    db.refresh(snapshot)
+    return QuestionGenerationResponse(
+        generated_set_id=snapshot.id, role_name=snapshot.role_name, level=snapshot.level,
+        total=len(items), questions=items, metadata=snapshot.generation_metadata, created_at=snapshot.created_at,
+    )
 
 DEFAULT_QUESTIONS = {
     "Software Engineer": [

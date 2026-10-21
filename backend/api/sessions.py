@@ -5,9 +5,10 @@ from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Query, status
 from sqlalchemy.orm import Session
+from pydantic import ValidationError
 
 from ..database import get_db
-from ..models import User, InterviewSession, SessionDetail, Question
+from ..models import User, InterviewSession, SessionDetail, Question, GeneratedQuestionSet
 from ..schemas import (
     SessionStartRequest,
     SessionStartResponse,
@@ -22,6 +23,7 @@ from ..schemas import (
 )
 from .questions import get_questions_for_role
 from ..services.pipeline_worker import process_answer_in_background
+from ..services.question_contracts import QuestionGenerationResponse, normalized_text
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -110,10 +112,34 @@ def get_recent_sessions(
 def start_interview_session(req: SessionStartRequest, db: Session = Depends(get_db)):
     """
     Khởi tạo phiên phỏng vấn mới:
+    - Nếu có generated_set_id: dùng đúng bộ câu hỏi đã sinh và xem trước.
     - Nếu có question_ids: lấy câu hỏi tương ứng trong bảng questions.
     - Nếu không: sinh câu hỏi mặc định theo role_name.
     - Tạo session và session_details.
     """
+    questions: List[QuestionItem] = []
+    role_name, level, jd_text = req.role_name, req.level or "fresher", req.jd_text
+    generated_set = None
+    if req.generated_set_id is not None:
+        generated_set = db.get(GeneratedQuestionSet, str(req.generated_set_id))
+        if generated_set is None:
+            raise HTTPException(status_code=404, detail="Không tìm thấy bộ câu hỏi đã sinh; hãy sinh lại.")
+        if (normalized_text(req.role_name) != normalized_text(generated_set.role_name)
+                or ("level" in req.model_fields_set and req.level is not None and req.level != generated_set.level)
+                or (req.jd_text is not None and normalized_text(req.jd_text) != normalized_text(generated_set.jd_text))):
+            raise HTTPException(status_code=409, detail="Vị trí, level hoặc JD đã đổi; hãy sinh lại câu hỏi trước khi bắt đầu.")
+        try:
+            preview = QuestionGenerationResponse(
+                generated_set_id=generated_set.id, role_name=generated_set.role_name, level=generated_set.level,
+                total=len(generated_set.questions), questions=generated_set.questions,
+                metadata=generated_set.generation_metadata, created_at=generated_set.created_at,
+            )
+        except (ValidationError, TypeError) as exc:
+            raise HTTPException(status_code=409, detail="Bộ câu hỏi lưu không hợp lệ; hãy sinh lại.") from exc
+        questions = [QuestionItem(order_index=q.order_index, question_text=q.question_text,
+                                  time_limit_seconds=q.time_limit_seconds) for q in preview.questions]
+        role_name, level, jd_text = generated_set.role_name, generated_set.level, generated_set.jd_text
+
     user_id = req.user_id or "guest_user"
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -125,15 +151,14 @@ def start_interview_session(req: SessionStartRequest, db: Session = Depends(get_
     session = InterviewSession(
         id=session_id,
         user_id=user.id,
-        role_name=req.role_name,
-        level=req.level or "fresher",
-        jd_text=req.jd_text,
+        role_name=role_name,
+        level=level,
+        jd_text=jd_text,
         status="IN_PROGRESS",
     )
     db.add(session)
 
     # Sinh hoặc lấy danh sách câu hỏi
-    questions: List[QuestionItem] = []
     if req.question_ids:
         db_questions = db.query(Question).filter(Question.id.in_(req.question_ids)).all()
         # Duy trì đúng thứ tự của req.question_ids
@@ -169,11 +194,12 @@ def start_interview_session(req: SessionStartRequest, db: Session = Depends(get_
 
     return SessionStartResponse(
         session_id=session_id,
-        role_name=req.role_name,
-        level=req.level or "fresher",
+        role_name=role_name,
+        level=level,
         total_questions=len(questions),
         questions=questions,
         created_at=datetime.utcnow().isoformat(),
+        generated_set_id=generated_set.id if generated_set is not None else None,
     )
 
 

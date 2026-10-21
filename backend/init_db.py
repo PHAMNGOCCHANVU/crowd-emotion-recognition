@@ -1,3 +1,4 @@
+import argparse
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -18,13 +19,15 @@ import backend.models as models
 from backend.security import get_password_hash
 
 
-def init_database():
+def init_database(*, questions_only=False):
     """
     Tạo toàn bộ schema bảng và nạp Seed Data mẫu cho hệ thống:
     1. Users: Admin và Candidate
     2. Industries & 9 Positions
     3. Ngân hàng câu hỏi phân theo 5 level
     4. 5 phiên phỏng vấn mẫu đã hoàn thành
+
+    questions_only=True chỉ nạp ngành, vị trí và câu hỏi, bỏ qua dữ liệu demo.
     """
     safe_url = DATABASE_URL
     if "@" in safe_url and ":" in safe_url:
@@ -65,8 +68,8 @@ def init_database():
     db = SessionLocal()
     try:
         # 1. Seed Users
-        admin_pass = get_password_hash("Admin@123456")
-        cand_pass = get_password_hash("Candidate@123456")
+        admin_pass = None if questions_only else get_password_hash("Admin@123456")
+        cand_pass = None if questions_only else get_password_hash("Candidate@123456")
 
         users_to_seed = [
             {
@@ -101,7 +104,7 @@ def init_database():
             },
         ]
 
-        for u_data in users_to_seed:
+        for u_data in (users_to_seed if not questions_only else []):
             existing_user = db.query(models.User).filter(
                 (models.User.id == u_data["id"]) | (models.User.email == u_data["email"])
             ).first()
@@ -417,7 +420,7 @@ def init_database():
             },
         ]
 
-        for s_data in sample_sessions:
+        for s_data in (sample_sessions if not questions_only else []):
             existing_sess = db.query(models.InterviewSession).filter_by(id=s_data["id"]).first()
             if not existing_sess:
                 details = s_data.pop("details", [])
@@ -450,4 +453,10 @@ def init_database():
 
 
 if __name__ == "__main__":
-    init_database()
+    parser = argparse.ArgumentParser(description="Khởi tạo database và ngân hàng câu hỏi.")
+    parser.add_argument(
+        "--questions-only", action="store_true",
+        help="Chỉ nạp ngành, vị trí và câu hỏi; không tạo tài khoản hoặc kết quả phỏng vấn demo.",
+    )
+    args = parser.parse_args()
+    init_database(questions_only=args.questions_only)

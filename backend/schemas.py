@@ -1,6 +1,7 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field
+from uuid import UUID
+from pydantic import BaseModel, Field, model_validator
 
 
 # ==========================================
@@ -19,6 +20,13 @@ class SessionStartRequest(BaseModel):
     jd_text: Optional[str] = None
     level: Optional[str] = Field("fresher", description="Cấp độ: intern, fresher, junior, mid, senior")
     question_ids: Optional[List[str]] = Field(None, description="Danh sách ID câu hỏi chọn trước")
+    generated_set_id: Optional[UUID] = Field(None, description="Mã bộ câu hỏi trả từ POST /api/questions/generate")
+
+    @model_validator(mode="after")
+    def one_question_source(self):
+        if self.generated_set_id is not None and self.question_ids:
+            raise ValueError("Chỉ dùng generated_set_id hoặc question_ids, không dùng đồng thời.")
+        return self
 
 
 class SessionStartResponse(BaseModel):
@@ -28,6 +36,7 @@ class SessionStartResponse(BaseModel):
     total_questions: int
     questions: List[QuestionItem]
     created_at: str
+    generated_set_id: Optional[str] = None
 
 
 class AnswerUploadResponse(BaseModel):

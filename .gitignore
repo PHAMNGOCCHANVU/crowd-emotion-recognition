@@ -116,3 +116,8 @@ project-context.md
 .clineignore
 plan/
 tests/
+!backend/tests/
+backend/tests/*
+!backend/tests/test_init_db.py
+!backend/tests/test_question_generation.py
+!backend/tests/test_question_generation_api.py
