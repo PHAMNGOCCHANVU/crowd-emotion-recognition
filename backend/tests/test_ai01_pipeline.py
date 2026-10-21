@@ -54,7 +54,7 @@ def pipeline(monkeypatch):
     speech = {"transcript": "Ừm, tôi tối ưu truy vấn.", "filler_words_count": 1,
               "words": [{"word": "Ừm,", "start": 0, "end": 0.3}],
               "metadata": {"provider": "groq", "is_mock": False}}
-    monkeypatch.setattr(worker, "transcribe_audio_whisper", lambda path: speech)
+    monkeypatch.setattr(worker, "transcribe_audio_whisper", lambda path, **kwargs: speech)
     client = Mock()
     client.models.generate_content.return_value = types.GenerateContentResponse(
         candidates=[types.Candidate(finish_reason="STOP", content=types.Content(parts=[types.Part(text=json.dumps({
@@ -111,7 +111,7 @@ def test_service_error_cleans_video_and_clears_stale_score(pipeline, sample_audi
         item.content_score = 100
         db.commit()
 
-    def fail(path):
+    def fail(path, **kwargs):
         raise ServiceError("speech_api_error", "Whisper HTTP 401")
 
     monkeypatch.setattr(pipeline.worker, "transcribe_audio_whisper", fail)
@@ -122,6 +122,24 @@ def test_service_error_cleans_video_and_clears_stale_score(pipeline, sample_audi
         assert item.status == "FAILED" and item.content_score is None
         assert item.ai_feedback["metadata"]["error_code"] == "speech_api_error"
         assert db.get(InterviewSession, "session").overall_score == 86
+
+
+def test_unreliable_whisper_transcript_is_not_sent_to_gemini(pipeline, sample_audio, monkeypatch):
+    def fail(path, **kwargs):
+        raise ServiceError("unreliable_transcript", "Whisper transcript is unreliable")
+
+    monkeypatch.setattr(pipeline.worker, "transcribe_audio_whisper", fail)
+    pipeline.worker.process_answer_in_background("session", 2, str(sample_audio))
+
+    assert not sample_audio.exists()
+    pipeline.client.models.generate_content.assert_not_called()
+    with pipeline.factory() as db:
+        item = db.get(SessionDetail, "two")
+        assert item.status == "COMPLETED"
+        assert item.transcript == ""
+        assert item.content_score == 0
+        assert item.ai_feedback["speech_metadata"]["fallback_reason"] == "unreliable_transcript"
+        assert item.ai_feedback["metadata"]["provider"] == "local"
 
 
 def test_missing_question_still_cleans_video(pipeline, sample_audio):

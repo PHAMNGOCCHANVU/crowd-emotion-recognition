@@ -45,8 +45,12 @@ def test_whisper_actual_sdk_multipart_and_result(sample_audio):
     def handler(request):
         assert request.url.path == "/openai/v1/audio/transcriptions"
         body = request.read()
-        for part in (b"whisper-large-v3-turbo", b"verbose_json", b"timestamp_granularities[]", b"word", b"RIFF"):
+        for part in (
+            b"whisper-large-v3-turbo", b"verbose_json", b"timestamp_granularities[]",
+            b"word", b"segment", b"temperature", b"RIFF",
+        ):
             assert part in body
+        assert b'name="prompt"' not in body
         return httpx.Response(200, json=whisper_payload())
 
     with whisper_client(handler) as client:
@@ -112,13 +116,27 @@ def test_auth_and_bad_request_do_not_become_fake_success(sample_audio, status):
     {"words": [{"word": "a", "start": 0.6, "end": 0.2}]},
     {"words": [{"word": "a", "start": 0.0, "end": 10.0}]},
     {"words": [{"word": "a", "start": 0.5, "end": 0.7}, {"word": "b", "start": 0.1, "end": 0.2}]},
-    {"text": None},
 ])
-def test_invalid_provider_timestamps_rejected(sample_audio, updates):
+def test_invalid_provider_timestamps_do_not_hide_transcript(sample_audio, updates):
     with whisper_client(lambda r: httpx.Response(200, json=whisper_payload(**updates))) as client:
+        result = transcribe_audio_whisper(sample_audio, client=client)
+    assert result["transcript"] == "Ừm, à."
+    assert result["words"] == []
+
+
+def test_missing_transcript_text_is_rejected(sample_audio):
+    calls = 0
+
+    def handler(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, json=whisper_payload(text=None))
+
+    with whisper_client(handler) as client:
         with pytest.raises(ServiceError) as error:
             transcribe_audio_whisper(sample_audio, client=client)
     assert error.value.code == "invalid_speech_response"
+    assert calls == 2
 
 
 def test_empty_transcription_is_valid(sample_audio):
@@ -126,6 +144,91 @@ def test_empty_transcription_is_valid(sample_audio):
         result = transcribe_audio_whisper(sample_audio, client=client)
     assert result["transcript"] == ""
     assert not result["metadata"]["is_mock"]
+
+
+def test_implausible_word_timestamps_retry_then_reject(sample_audio):
+    hallucination = whisper_payload(
+        text="Hãy subscribe cho kênh để không bỏ lỡ những video hấp dẫn",
+        words=[
+            {"word": word, "start": index * 0.02, "end": (index + 1) * 0.02}
+            for index, word in enumerate(
+                "Hãy subscribe cho kênh để không bỏ lỡ những video hấp dẫn".split()
+            )
+        ],
+    )
+    calls = 0
+
+    def handler(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, json=hallucination)
+
+    with whisper_client(handler) as client:
+        with pytest.raises(ServiceError) as error:
+            transcribe_audio_whisper(sample_audio, client=client)
+    assert error.value.code == "unreliable_transcript"
+    assert calls == 2
+
+
+def test_implausible_first_response_can_recover_on_retry(sample_audio):
+    calls = 0
+
+    def handler(request):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(200, json=whisper_payload(
+                text="Hãy subscribe cho kênh để không bỏ lỡ những video hấp dẫn",
+                words=[
+                    {"word": word, "start": index * 0.02, "end": (index + 1) * 0.02}
+                    for index, word in enumerate(
+                        "Hãy subscribe cho kênh để không bỏ lỡ những video hấp dẫn".split()
+                    )
+                ],
+            ))
+        return httpx.Response(200, json=whisper_payload())
+
+    with whisper_client(handler) as client:
+        result = transcribe_audio_whisper(sample_audio, client=client)
+    assert calls == 2
+    assert result["transcript"] == "Ừm, à."
+
+
+@pytest.mark.parametrize("segment", [
+    {"no_speech_prob": 0.95},
+    {"avg_logprob": -1.6},
+    {"compression_ratio": 3.1},
+])
+def test_one_low_quality_segment_signal_does_not_hide_clear_transcript(sample_audio, segment):
+    calls = 0
+
+    def handler(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, json=whisper_payload(segments=[segment]))
+
+    with whisper_client(handler) as client:
+        result = transcribe_audio_whisper(sample_audio, client=client)
+    assert result["transcript"] == "Ừm, à."
+    assert calls == 1
+
+
+def test_combined_low_confidence_segment_signals_do_not_hide_transcript(sample_audio):
+    calls = 0
+
+    def handler(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, json=whisper_payload(segments=[{
+            "no_speech_prob": 0.95,
+            "avg_logprob": -1.6,
+            "compression_ratio": 3.1,
+        }]))
+
+    with whisper_client(handler) as client:
+        result = transcribe_audio_whisper(sample_audio, client=client)
+    assert result["transcript"] == "Ừm, à."
+    assert calls == 1
 
 
 def test_temp_audio_removed_on_unexpected_provider_failure(sample_audio):
@@ -200,7 +303,7 @@ def test_extraction_timeout_cleans_partial_file(sample_audio, monkeypatch):
 
 
 def test_bundled_spoken_sample_decodes():
-    sample = Path(__file__).parent / "fixtures" / "interview_answer_en.webm"
+    sample = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "interview_answer_en.webm"
     with extracted_audio(sample, AISettings()) as (audio, duration):
         assert audio.is_file()
         assert 20 < duration < 25
