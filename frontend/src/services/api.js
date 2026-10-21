@@ -272,4 +272,131 @@ export const api = {
     const res = await axios.delete(`${API_BASE}/admin/positions/${id}`);
     return res.data;
   },
+
+  // ==========================================
+  // ADMIN MANAGEMENT APIS
+  // ==========================================
+
+  // Dashboard Stats
+  adminGetStats: () =>
+    withMock(
+      async () => {
+        const res = await axios.get(`${API_BASE}/admin/dashboard/stats`);
+        return ensure(res.data, (d) => typeof d?.total_sessions === 'number');
+      },
+      () => ({
+        total_users: 12,
+        total_sessions: 28,
+        completion_rate: 85.7,
+        average_score: 78.4,
+        recent_sessions: [
+          { session_id: 's_01', role: 'Backend Developer', candidate_name: 'Nguyễn Văn A', date: '21/10/2026', status: 'Hoàn thành', score: 85.0 },
+          { session_id: 's_02', role: 'Frontend Developer', candidate_name: 'Trần Thị B', date: '21/10/2026', status: 'Hoàn thành', score: 76.5 },
+          { session_id: 's_03', role: 'Data Analyst', candidate_name: 'Lê Hoàng C', date: '20/10/2026', status: 'Đang làm', score: 0.0 },
+        ],
+      })
+    ),
+
+  // Users Management
+  adminGetUsers: (search) =>
+    withMock(
+      async () => {
+        const res = await axios.get(`${API_BASE}/admin/users`, { params: search ? { search } : {} });
+        return ensure(res.data, Array.isArray);
+      },
+      () => [
+        { id: 'user_123', email: 'candidate@mockinterview.ai', full_name: 'Nguyễn Minh Đức', phone_number: '0901234567', role: 'USER', session_count: 3, average_score: 82.5, created_at: '2026-10-15T08:00:00' },
+        { id: 'user_02', email: 'a.nguyen@email.com', full_name: 'Nguyễn Văn A', phone_number: '0912345678', role: 'USER', session_count: 2, average_score: 85.0, created_at: '2026-10-18T09:30:00' },
+        { id: 'user_03', email: 'b.tran@email.com', full_name: 'Trần Thị B', phone_number: '0987654321', role: 'USER', session_count: 1, average_score: 76.5, created_at: '2026-10-20T14:15:00' },
+      ].filter((u) => !search || u.full_name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()))
+    ),
+
+  adminGetUserSessions: async (userId) => {
+    try {
+      const res = await axios.get(`${API_BASE}/admin/users/${userId}/sessions`);
+      return res.data;
+    } catch {
+      return [
+        { session_id: 's_01', role_name: 'Backend Developer', level: 'junior', overall_score: 82.5, confidence_score: 80.0, stress_score: 20.0, status: 'COMPLETED', created_at: '20/10/2026 15:30' },
+      ];
+    }
+  },
+
+  adminDeleteUser: async (userId) => {
+    const res = await axios.delete(`${API_BASE}/admin/users/${userId}`);
+    return res.data;
+  },
+
+  // Industries Management
+  adminGetIndustries: () =>
+    withMock(
+      async () => {
+        const res = await axios.get(`${API_BASE}/admin/industries`);
+        return ensure(res.data, Array.isArray);
+      },
+      () => [
+        { id: 'ind_tech', name: 'Công nghệ thông tin', code: 'IT', status: 'ACTIVE', position_count: 4 },
+        { id: 'ind_finance', name: 'Tài chính - Ngân hàng', code: 'FIN', status: 'ACTIVE', position_count: 2 },
+      ]
+    ),
+
+  adminCreateIndustry: async (payload) => {
+    const res = await axios.post(`${API_BASE}/admin/industries`, payload);
+    return res.data;
+  },
+
+  adminUpdateIndustry: async (id, payload) => {
+    const res = await axios.patch(`${API_BASE}/admin/industries/${id}`, payload);
+    return res.data;
+  },
+
+  adminDeleteIndustry: async (id) => {
+    const res = await axios.delete(`${API_BASE}/admin/industries/${id}`);
+    return res.data;
+  },
+
+  // Positions Management
+  adminGetPositions: () =>
+    withMock(
+      async () => {
+        const res = await axios.get(`${API_BASE}/admin/positions`);
+        return ensure(res.data, Array.isArray);
+      },
+      () => [
+        { id: 'backend', name: 'Backend Developer', code: 'backend', industry_name: 'Công nghệ thông tin', skills: ['Python', 'SQL'], duration: '3–6 tháng', icon: 'server', status: 'ACTIVE', question_count: 10 },
+        { id: 'frontend', name: 'Frontend Developer', code: 'frontend', industry_name: 'Công nghệ thông tin', skills: ['React', 'CSS'], duration: '3–6 tháng', icon: 'layout', status: 'ACTIVE', question_count: 8 },
+      ]
+    ),
+
+  adminCreatePosition: async (payload) => {
+    const res = await axios.post(`${API_BASE}/admin/positions`, payload);
+    return res.data;
+  },
+
+  adminUpdatePosition: async (id, payload) => {
+    const res = await axios.patch(`${API_BASE}/admin/positions/${id}`, payload);
+    return res.data;
+  },
+
+  adminDeletePosition: async (id) => {
+    const res = await axios.delete(`${API_BASE}/admin/positions/${id}`);
+    return res.data;
+  },
+
+  // Questions Management
+  adminCreateQuestion: async (payload) => {
+    const res = await axios.post(`${API_BASE}/admin/questions`, payload);
+    return res.data;
+  },
+
+  adminUpdateQuestion: async (id, payload) => {
+    const res = await axios.patch(`${API_BASE}/admin/questions/${id}`, payload);
+    return res.data;
+  },
+
+  adminDeleteQuestion: async (id) => {
+    const res = await axios.delete(`${API_BASE}/admin/questions/${id}`);
+    return res.data;
+  },
 };
+
