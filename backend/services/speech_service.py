@@ -25,7 +25,7 @@ _FILLER_PATTERN = re.compile(
 )
 SUPPORTED_EXTENSIONS = {".wav", ".webm", ".mp4", ".m4a", ".mp3", ".ogg", ".flac", ".mpeg", ".mpga"}
 DEMO_TRANSCRIPT = "Ừm, tôi phụ trách backend. À, tôi đã tối ưu truy vấn và giảm thời gian phản hồi."
-SPEECH_MODEL = "whisper-large-v3-turbo"
+SPEECH_MODEL = "whisper-large-v3"
 
 
 def analyze_filler_words(transcript: str) -> dict:

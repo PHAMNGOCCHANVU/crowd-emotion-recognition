@@ -75,7 +75,7 @@ Kết quả ví dụ minh họa schema:
   "filler_words_count": 1,
   "filler_words": {"ừm": 1},
   "metadata": {
-    "provider": "groq", "model": "whisper-large-v3-turbo", "is_mock": false,
+    "provider": "groq", "model": "whisper-large-v3", "is_mock": false,
     "fallback_reason": null, "latency_ms": 1200.0
   }
 }
@@ -145,7 +145,7 @@ Kết quả kiểm thử tự động và demo mock không thay thế kiểm th�
 
 ## Tài liệu API đã đối chiếu
 
-- [Groq Speech to Text](https://console.groq.com/docs/speech-to-text): dùng `whisper-large-v3-turbo`, `verbose_json`, `timestamp_granularities=["word"]` để lấy timestamps từng từ. API dùng key Groq, không dùng key OpenAI.
+- [Groq Speech to Text](https://console.groq.com/docs/speech-to-text): dùng `whisper-large-v3`, `verbose_json`, `timestamp_granularities=["word"]` để lấy timestamps từng từ. API dùng key Groq, không dùng key OpenAI.
 - [Google Gen AI Python SDK](https://googleapis.github.io/python-genai/): `models.generate_content`, JSON schema, timeout và quản lý client.
 - [Gemini deprecations](https://ai.google.dev/gemini-api/docs/deprecations): Gemini 2.0 đã dừng ngày 01/06/2026; cấu hình mặc định chuyển sang Gemini 3.8 Flash theo tài liệu ngày 09/10/2026. Quyền truy cập model thực tế cần kiểm chứng với key của nhóm.
 

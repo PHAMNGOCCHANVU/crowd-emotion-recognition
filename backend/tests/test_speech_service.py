@@ -45,7 +45,7 @@ def test_whisper_actual_sdk_multipart_and_result(sample_audio):
     def handler(request):
         assert request.url.path == "/openai/v1/audio/transcriptions"
         body = request.read()
-        for part in (b"whisper-large-v3-turbo", b"verbose_json", b"timestamp_granularities[]", b"word", b"RIFF"):
+        for part in (b"whisper-large-v3", b"verbose_json", b"timestamp_granularities[]", b"word", b"RIFF"):
             assert part in body
         return httpx.Response(200, json=whisper_payload())
 
@@ -56,7 +56,7 @@ def test_whisper_actual_sdk_multipart_and_result(sample_audio):
     assert result["filler_words_count"] == 2
     assert result["words"][1]["start"] == 0.4
     assert result["metadata"]["provider"] == "groq"
-    assert result["metadata"]["model"] == "whisper-large-v3-turbo"
+    assert result["metadata"]["model"] == "whisper-large-v3"
     assert not result["metadata"]["is_mock"]
     assert sample_audio.exists()
 
