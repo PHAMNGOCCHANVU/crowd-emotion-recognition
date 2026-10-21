@@ -50,6 +50,21 @@ class TestUserProfileAPI:
         assert response.status_code == 200
         assert "<script>" in response.json()["full_name"]
 
+    def test_get_profile_dev_fallback_without_header(self, client):
+        """Happy Path / Dev Mode: Khi không truyền header, fallback về user mặc định."""
+        response = client.get("/api/user/profile")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == "user_123"
+
+    def test_update_profile_phone_number_only(self, client):
+        """Happy Path: Chỉ cập nhật số điện thoại mà không thay đổi họ tên."""
+        payload = {"phone_number": "0911223344"}
+        response = client.patch("/api/user/profile", json=payload, headers=USER_HEADERS)
+        assert response.status_code == 200
+        assert response.json()["phone_number"] == "0911223344"
+        assert response.json()["full_name"] is not None
+
 
 class TestChangePasswordAPI:
     """Kiểm thử đổi mật khẩu (/api/user/change-password)."""
@@ -105,3 +120,31 @@ class TestChangePasswordAPI:
         }
         response = client.post("/api/user/change-password", json=payload, headers=USER_HEADERS)
         assert response.status_code == 422
+
+    def test_change_password_cycle_and_verify_old_password_rejected(self, client):
+        """Security: Sau khi đổi mật khẩu, mật khẩu cũ không còn hợp lệ để đổi tiếp."""
+        # 1. Đổi lần đầu sang mật khẩu mới
+        resp1 = client.post(
+            "/api/user/change-password",
+            json={"current_password": "User@123456", "new_password": "BrandNewPassword@2026"},
+            headers=USER_HEADERS,
+        )
+        assert resp1.status_code == 200
+
+        # 2. Thử đổi tiếp bằng mật khẩu cũ ban đầu -> phải bị từ chối 400
+        resp2 = client.post(
+            "/api/user/change-password",
+            json={"current_password": "User@123456", "new_password": "AnotherPassword@2026"},
+            headers=USER_HEADERS,
+        )
+        assert resp2.status_code == 400
+        assert "không chính xác" in resp2.json()["detail"]
+
+        # 3. Đổi tiếp bằng mật khẩu mới -> thành công
+        resp3 = client.post(
+            "/api/user/change-password",
+            json={"current_password": "BrandNewPassword@2026", "new_password": "FinalPassword@2026"},
+            headers=USER_HEADERS,
+        )
+        assert resp3.status_code == 200
+

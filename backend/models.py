@@ -150,6 +150,9 @@ class Question(Base):
     level = Column(String(50), default="junior")  # intern, fresher, junior, mid, senior
     levels = Column(JSON, nullable=True)          # ["intern", "fresher", "junior", ...]
 
+    source = Column(String(20), default="DEFAULT", nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
     section = relationship("Section", back_populates="questions")
     position = relationship("Position", back_populates="questions")
     answers = relationship("AttemptAnswer", back_populates="question")

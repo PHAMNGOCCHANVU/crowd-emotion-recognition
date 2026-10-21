@@ -6,14 +6,28 @@ import HomePage from './pages/HomePage';
 import AuthPage from './pages/AuthPage';
 import UserHomePage from './pages/UserHomePage';
 import HistoryPage from './pages/HistoryPage';
-import { Mic2, Home, Video, History, UserRound, Sparkles, LogOut } from 'lucide-react';
+import PracticePage from './pages/PracticePage';
+import ProfilePage from './pages/ProfilePage';
+import ChatbotDrawer from './components/ChatbotDrawer';
+import {
+  Mic2,
+  Home,
+  BookOpen,
+  Video,
+  History,
+  UserRound,
+  Sparkles,
+  LogOut,
+} from 'lucide-react';
 import AdminLayout from './pages/Admin/AdminLayout';
 
 export default function App() {
   const initialPath = window.location.pathname;
   const [route, setRoute] = useState(initialPath);
-  const [currentPage, setCurrentPage] = useState(initialPath.startsWith('/results') ? 'dashboard' : 'setup'); // 'setup' | 'interview' | 'dashboard'
-  
+  const [currentPage, setCurrentPage] = useState(
+    initialPath.startsWith('/results') ? 'dashboard' : 'setup'
+  ); // 'setup' | 'interview' | 'dashboard'
+
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('interviewlab_user');
@@ -34,9 +48,20 @@ export default function App() {
 
   const [cameraStream, setCameraStream] = useState(null);
   const [recordedBlobs, setRecordedBlobs] = useState({});
-  const [activeSection, setActiveSection] = useState('home');
+  const [activeSection, setActiveSection] = useState(() => {
+    if (initialPath === '/practice') return 'practice';
+    if (initialPath === '/history') return 'history';
+    if (initialPath === '/profile') return 'profile';
+    if (initialPath === '/interview' || initialPath.startsWith('/results')) return 'interview';
+    return 'home';
+  });
   const [interviewPreset, setInterviewPreset] = useState(null);
-  const [, setPublicPage] = useState(initialPath === '/register' ? 'register' : initialPath === '/login' ? 'login' : 'home');
+  const [, setPublicPage] = useState(
+    initialPath === '/register' ? 'register' : initialPath === '/login' ? 'login' : 'home'
+  );
+
+  // State điều khiển Global Chatbot Slide-over Drawer
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -45,6 +70,8 @@ export default function App() {
       if (path.startsWith('/results')) {
         setCurrentPage('dashboard');
         setActiveSection('interview');
+      } else if (path === '/practice') {
+        setActiveSection('practice');
       } else if (path === '/history') {
         setActiveSection('history');
       } else if (path === '/profile') {
@@ -78,6 +105,7 @@ export default function App() {
     setRecordedBlobs({});
     setCurrentPage('setup');
     setActiveSection('home');
+    setIsChatOpen(false);
     navigate('/login');
   };
 
@@ -99,7 +127,6 @@ export default function App() {
 
   const handleFinishInterview = (sessionId, blobsMap) => {
     setRecordedBlobs(blobsMap);
-    // Tắt camera khi đã phỏng vấn xong để giải phóng thiết bị
     if (cameraStream) {
       cameraStream.getTracks().forEach((track) => track.stop());
     }
@@ -147,29 +174,37 @@ export default function App() {
     navigate('/interview');
   };
 
+  const handleViewSessionDetail = (sessionId) => {
+    navigate(`/results?session_id=${sessionId}`);
+    setCurrentPage('dashboard');
+    setActiveSection('interview');
+  };
+
+  const isInterviewing = currentPage === 'interview' && Boolean(sessionData);
+
   const renderSection = () => {
-    if (activeSection === 'history') return <HistoryPage />;
+    if (activeSection === 'practice') {
+      return (
+        <PracticePage
+          onStartInterview={handleStartFromHome}
+        />
+      );
+    }
+    if (activeSection === 'history') {
+      return <HistoryPage onViewSessionDetail={handleViewSessionDetail} />;
+    }
     if (activeSection === 'profile') {
       return (
-        <div className="empty-page">
-          <div className="eyebrow">Account</div>
-          <h1 className="page-title">Hồ sơ cá nhân</h1>
-          <p className="page-subtitle">Thông tin dùng cho các phiên luyện tập của bạn.</p>
-          <div className="profile-card">
-            <div className="profile-avatar">ND</div>
-            <div>
-              <div className="history-role">{user?.full_name || user?.name || 'Ứng viên'}</div>
-              <div className="history-date">{user?.email} · Thành viên từ tháng 10/2026</div>
-            </div>
-          </div>
-          <button 
-            className="secondary-button" 
-            style={{ marginTop: 20, color: '#ef4444', borderColor: '#fca5a5' }} 
-            onClick={handleLogout}
-          >
-            Đăng xuất tài khoản
-          </button>
-        </div>
+        <ProfilePage
+          user={user}
+          onUserUpdated={(updated) => {
+            setUser(updated);
+            try {
+              localStorage.setItem('interviewlab_user', JSON.stringify(updated));
+            } catch (e) {}
+          }}
+          onLogout={handleLogout}
+        />
       );
     }
     if (activeSection === 'home') {
@@ -182,47 +217,56 @@ export default function App() {
       );
     }
 
-    const querySessionId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('session_id') : null;
-    const activeSessionId = sessionData?.session_id || querySessionId || (typeof localStorage !== 'undefined' ? localStorage.getItem('interviewlab_last_session_id') : null);
+    const querySessionId =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('session_id')
+        : null;
+    const activeSessionId =
+      sessionData?.session_id ||
+      querySessionId ||
+      (typeof localStorage !== 'undefined'
+        ? localStorage.getItem('interviewlab_last_session_id')
+        : null);
 
     if (currentPage === 'setup') {
       return (
-        <SetupPage 
-          initialPositionId={interviewPreset?.positionId} 
-          initialLevel={interviewPreset?.level} 
-          onStartInterview={handleStartInterview} 
+        <SetupPage
+          initialPositionId={interviewPreset?.positionId}
+          initialLevel={interviewPreset?.level}
+          onStartInterview={handleStartInterview}
         />
       );
     }
     if (currentPage === 'interview' && sessionData) {
       return (
-        <InterviewRoom 
-          session={sessionData} 
-          stream={cameraStream} 
-          onFinishInterview={handleFinishInterview} 
+        <InterviewRoom
+          session={sessionData}
+          stream={cameraStream}
+          onFinishInterview={handleFinishInterview}
         />
       );
     }
     if (currentPage === 'dashboard' && activeSessionId) {
       return (
-        <DashboardPage 
-          sessionId={activeSessionId} 
-          blobsMap={recordedBlobs} 
-          onRestart={handleRestart} 
+        <DashboardPage
+          sessionId={activeSessionId}
+          blobsMap={recordedBlobs}
+          onRestart={handleRestart}
         />
       );
     }
     return (
-      <SetupPage 
-        initialPositionId={interviewPreset?.positionId} 
-        initialLevel={interviewPreset?.level} 
-        onStartInterview={handleStartInterview} 
+      <SetupPage
+        initialPositionId={interviewPreset?.positionId}
+        initialLevel={interviewPreset?.level}
+        onStartInterview={handleStartInterview}
       />
     );
   };
 
   const navItems = [
     ['home', 'Trang chủ', Home],
+    ['practice', 'Ôn luyện', BookOpen],
     ['interview', 'Phỏng vấn', Video],
     ['history', 'Lịch sử', History],
     ['profile', 'Hồ sơ', UserRound],
@@ -230,7 +274,13 @@ export default function App() {
 
   if (route.startsWith('/admin')) {
     return (
-      <AdminLayout currentRoute={route} onNavigate={(path) => { window.history.pushState({}, '', path); setRoute(path); }} />
+      <AdminLayout
+        currentRoute={route}
+        onNavigate={(path) => {
+          window.history.pushState({}, '', path);
+          setRoute(path);
+        }}
+      />
     );
   }
 
@@ -239,38 +289,85 @@ export default function App() {
       return (
         <>
           <header className="app-header public-header">
-            <div className="brand"><span className="brand-mark"><Mic2 size={18} /></span><span>InterviewLab</span></div>
+            <div className="brand">
+              <span className="brand-mark"><Mic2 size={18} /></span>
+              <span>InterviewLab</span>
+            </div>
             <div className="public-actions">
-              <button className="auth-link" onClick={() => { setPublicPage('login'); navigate('/login'); }}>Đăng nhập</button>
-              <button className="primary-button" onClick={() => { setPublicPage('register'); navigate('/register'); }}>Đăng ký</button>
+              <button
+                className="auth-link"
+                onClick={() => {
+                  setPublicPage('login');
+                  navigate('/login');
+                }}
+              >
+                Đăng nhập
+              </button>
+              <button
+                className="primary-button"
+                onClick={() => {
+                  setPublicPage('register');
+                  navigate('/register');
+                }}
+              >
+                Đăng ký
+              </button>
             </div>
           </header>
-          <HomePage onLogin={() => { setPublicPage('login'); navigate('/login'); }} onRegister={() => { setPublicPage('register'); navigate('/register'); }} />
+          <HomePage
+            onLogin={() => {
+              setPublicPage('login');
+              navigate('/login');
+            }}
+            onRegister={() => {
+              setPublicPage('register');
+              navigate('/register');
+            }}
+          />
         </>
       );
     }
     return (
       <>
         <header className="app-header public-header">
-          <div className="brand"><span className="brand-mark"><Mic2 size={18} /></span><span>InterviewLab</span></div>
-          <button className="auth-link" onClick={() => { setPublicPage('home'); navigate('/'); }}>Trang chủ</button>
+          <div className="brand">
+            <span className="brand-mark"><Mic2 size={18} /></span>
+            <span>InterviewLab</span>
+          </div>
+          <button
+            className="auth-link"
+            onClick={() => {
+              setPublicPage('home');
+              navigate('/');
+            }}
+          >
+            Trang chủ
+          </button>
         </header>
-        <AuthPage 
-          mode={route === '/register' ? 'register' : 'login'} 
-          onModeChange={(mode) => { setPublicPage(mode); navigate(`/${mode}`); }} 
-          onAuthenticated={(nextUser) => { 
-            setUser(nextUser); 
+        <AuthPage
+          mode={route === '/register' ? 'register' : 'login'}
+          onModeChange={(mode) => {
+            setPublicPage(mode);
+            navigate(`/${mode}`);
+          }}
+          onAuthenticated={(nextUser) => {
+            setUser(nextUser);
             try {
               localStorage.setItem('interviewlab_user', JSON.stringify(nextUser));
             } catch (e) {}
-            if (nextUser?.email === 'admin@mockinterview.ai' || nextUser?.email === 'admin@interviewlab.test' || nextUser?.role === 'admin' || nextUser?.role === 'ADMIN') {
+            if (
+              nextUser?.email === 'admin@mockinterview.ai' ||
+              nextUser?.email === 'admin@interviewlab.test' ||
+              nextUser?.role === 'admin' ||
+              nextUser?.role === 'ADMIN'
+            ) {
               navigate('/admin');
             } else {
-              setActiveSection('home'); 
-              setCurrentPage('setup'); 
-              navigate('/home'); 
+              setActiveSection('home');
+              setCurrentPage('setup');
+              navigate('/home');
             }
-          }} 
+          }}
         />
       </>
     );
@@ -278,33 +375,66 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {/* Global Header */}
       <header className="app-header">
-        <a href="/" className="brand" onClick={(e) => { e.preventDefault(); handleNavigation('home'); }}>
+        <a
+          href="/"
+          className="brand"
+          onClick={(e) => {
+            e.preventDefault();
+            handleNavigation('home');
+          }}
+        >
           <span className="brand-mark"><Mic2 size={18} /></span>
           <span>InterviewLab</span>
         </a>
-        <div className="header-meta">Phân tích đa phương thức · FER · Whisper · Gemini</div>
+
+        {/* Cụm Action Header: Nút Trigger mở AI Cố vấn */}
+        <div className="header-actions">
+          {!isInterviewing && (
+            <button
+              className="advisor-trigger-btn"
+              onClick={() => setIsChatOpen(true)}
+              title="Mở AI Cố vấn phỏng vấn"
+            >
+              <Sparkles size={16} />
+              <span>AI Cố vấn</span>
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="app-layout">
+        {/* Sidebar */}
         <aside className="sidebar">
           <p className="sidebar-label">Workspace</p>
           <nav className="sidebar-nav">
             {navItems.map(([id, label, Icon]) => (
-              <button key={id} className={`sidebar-item ${activeSection === id ? 'active' : ''}`} onClick={() => handleNavigation(id)}>
-                <Icon size={17} /><span>{label}</span>
+              <button
+                key={id}
+                className={`sidebar-item ${activeSection === id ? 'active' : ''}`}
+                onClick={() => handleNavigation(id)}
+              >
+                <Icon size={17} />
+                <span>{label}</span>
               </button>
             ))}
           </nav>
           <button className="sidebar-item sidebar-logout" onClick={handleLogout}>
-            <LogOut size={17} /><span>Đăng xuất</span>
+            <LogOut size={17} />
+            <span>Đăng xuất</span>
           </button>
-          <div className="sidebar-note">
-            <Sparkles size={14} style={{ verticalAlign: 'middle', marginRight: 5 }} /> AI phân tích giúp bạn cải thiện từng câu trả lời.
-          </div>
         </aside>
+
+        {/* Main Content */}
         <main className="main-content">{renderSection()}</main>
       </div>
+
+      {/* Global Slide-over Chatbot Drawer */}
+      <ChatbotDrawer
+        isOpen={isChatOpen && !isInterviewing}
+        onClose={() => setIsChatOpen(false)}
+      />
     </div>
   );
 }
