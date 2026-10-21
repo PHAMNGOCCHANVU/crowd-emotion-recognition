@@ -112,6 +112,24 @@ def _preprocess_face(face_bgr, target_size=(64, 64)) -> np.ndarray:
     return tensor
 
 
+def _load_face_cascade():
+    """Read XML with Python: OpenCV's Windows path loader can reject Unicode."""
+    cascade_path = Path(cv.data.haarcascades) / "haarcascade_frontalface_default.xml"
+    try:
+        xml = cascade_path.read_text(encoding="utf-8")
+        storage = cv.FileStorage(xml, cv.FILE_STORAGE_READ | cv.FILE_STORAGE_MEMORY)
+        try:
+            detector = cv.CascadeClassifier()
+            loaded = detector.read(storage.getFirstTopLevelNode())
+        finally:
+            storage.release()
+    except (OSError, cv.error) as exc:
+        raise RuntimeError("Không thể nạp file Haar Cascade để phát hiện khuôn mặt.") from exc
+    if not loaded or detector.empty():
+        raise RuntimeError("File Haar Cascade không chứa bộ phát hiện khuôn mặt hợp lệ.")
+    return detector
+
+
 def _predict_emotion(face_bgr) -> tuple[str, float]:
     """Dự đoán cảm xúc và độ tin cậy từ ảnh khuôn mặt crop."""
     session, pt_model = _load_engine()
@@ -221,8 +239,7 @@ def analyze_interview_video_fer(video_path: str) -> Dict[str, Any]:
         frame_idx = 0
 
         # Dùng Haar Cascade phát hiện khuôn mặt chính diện với tốc độ xử lý cao
-        haar_path = cv.data.haarcascades + "haarcascade_frontalface_default.xml"
-        face_cascade = cv.CascadeClassifier(haar_path)
+        face_cascade = _load_face_cascade()
 
         while True:
             ret, frame = cap.read()

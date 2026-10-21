@@ -122,27 +122,11 @@ export const api = {
     return res.data;
   },
 
-  // GET /questions/positions?level=fresher
-  getPositions: ({ level } = {}) =>
-    withMock(
-      async () => {
-        const res = await axios.get(`${API_BASE}/questions/positions`, { params: { level } });
-        return ensure(res.data, Array.isArray);
-      },
-      () => mockListPositions(level)
-    ),
+  // Dùng cùng nguồn mock với ngân hàng câu hỏi để ID vị trí luôn khớp.
+  getPositions: async ({ level } = {}) => mockListPositions(level),
 
-  // GET /questions?position_id=backend&level=fresher
-  getQuestions: ({ positionId, level }) =>
-    withMock(
-      async () => {
-        const res = await axios.get(`${API_BASE}/questions`, {
-          params: { position_id: positionId, level },
-        });
-        return ensure(res.data, (d) => Array.isArray(d?.questions));
-      },
-      () => mockListQuestions(positionId, level)
-    ),
+  // Tạm thời lấy ngân hàng câu hỏi từ mock data của frontend.
+  getQuestions: async ({ positionId, level }) => mockListQuestions(positionId, level),
 
   // GET /sessions/history
   getSessionHistory: () =>

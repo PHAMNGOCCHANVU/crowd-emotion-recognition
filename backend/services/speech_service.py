@@ -1,7 +1,10 @@
 """Decode one interview answer, transcribe with Whisper, and count fillers."""
 
+import array
+import math
 import re
 import subprocess
+import sys
 import tempfile
 import time
 import unicodedata
@@ -26,7 +29,15 @@ _FILLER_PATTERN = re.compile(
 SUPPORTED_EXTENSIONS = {".wav", ".webm", ".mp4", ".m4a", ".mp3", ".ogg", ".flac", ".mpeg", ".mpga"}
 DEMO_TRANSCRIPT = "Ừm, tôi phụ trách backend. À, tôi đã tối ưu truy vấn và giảm thời gian phản hồi."
 SPEECH_MODEL = "whisper-large-v3"
-
+KNOWN_HALLUCINATION_PHRASES = (
+    "hãy subscribe cho kênh",
+    "đừng quên đăng ký kênh",
+    "hãy đăng ký kênh",
+    "đăng ký kênh để nhận",
+    "cảm ơn các bạn đã theo dõi",
+    "hẹn gặp lại các bạn trong những video tiếp theo",
+    "thank you for watching",
+)
 
 def analyze_filler_words(transcript: str) -> dict:
     """Count lexical occurrences, not an acoustic/semantic hesitation diagnosis."""
@@ -60,6 +71,8 @@ def extracted_audio(media_path: str | Path, settings: AISettings) -> Iterator[tu
         command = [
             binary, "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
             "-i", str(source), "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "16000",
+            # Normalize quiet browser microphone recordings before Whisper.
+            "-af", "loudnorm=I=-16:LRA=11:TP=-1.5",
             # Decode one extra second to reject oversize answers without unbounded disk use.
             "-t", str(settings.max_duration_seconds + 1), "-c:a", "pcm_s16le", str(target),
         ]
@@ -80,6 +93,11 @@ def extracted_audio(media_path: str | Path, settings: AISettings) -> Iterator[tu
             raise ServiceError("invalid_duration", "Câu trả lời rỗng hoặc vượt giới hạn thời lượng.")
         if target.stat().st_size >= 25_000_000:
             raise ServiceError("invalid_media", "Audio vượt giới hạn upload Whisper.")
+        rms_dbfs, peak_dbfs = _wav_levels(target)
+        print(
+            "[Speech Service] Audio đầu vào: "
+            f"duration={duration:.2f}s rms={rms_dbfs:.1f} dBFS peak={peak_dbfs:.1f} dBFS"
+        )
         yield target, duration
 
 
@@ -113,11 +131,33 @@ def transcribe_audio_whisper(
         try:
             with (nullcontext(provider) if client is not None else provider) as api:
                 with audio_path.open("rb") as audio:
-                    response = api.audio.transcriptions.create(
-                        model=SPEECH_MODEL, file=audio, response_format="verbose_json",
-                        timestamp_granularities=["word"],
-                        **({"language": language} if language else {}),
-                    )
+                    for attempt in range(2):
+                        response = _request_transcription(
+                            api,
+                            audio,
+                            language,
+                            retry=attempt > 0,
+                        )
+                        try:
+                            text, words = _validated_transcription(response, duration)
+                        except (AttributeError, TypeError, ValueError, ValidationError):
+                            # A malformed provider response can be transient.
+                            if attempt == 0:
+                                continue
+                            raise
+
+                        reason = _unreliable_transcript_reason(text)
+                        if not reason:
+                            break
+                        if attempt == 0:
+                            # Whisper occasionally hallucinates stock subtitle phrases.
+                            # Retry once with a slightly different decoding temperature.
+                            continue
+                        raise ServiceError(
+                            "unreliable_transcript",
+                            f"Whisper trả transcript có độ tin cậy thấp ({reason}); "
+                            "vui lòng thu lại câu trả lời.",
+                        )
         except APIConnectionError as exc:
             if settings.allow_fallback:
                 return _result("", [], duration, started, "mock", "provider_unavailable", language)
@@ -128,23 +168,83 @@ def transcribe_audio_whisper(
                 return _result("", [], duration, started, "mock", "provider_unavailable", language)
             raise ServiceError("speech_api_error", f"Groq Whisper trả HTTP {exc.status_code}.") from exc
 
-        try:
-            if not isinstance(response.text, str):
-                raise ValueError("missing transcript")
-            text = response.text.strip()
-            words = [WordTimestamp.model_validate(w.model_dump() if hasattr(w, "model_dump") else w)
-                     for w in (getattr(response, "words", None) or [])]
-            if text and not words:
-                raise ValueError("missing word timestamps")
-            if not text and words:
-                raise ValueError("timestamps without transcript")
-            if any(w.end > duration + 0.5 for w in words):
-                raise ValueError("timestamps exceed audio")
-            if any(b.start < a.start for a, b in zip(words, words[1:])):
-                raise ValueError("timestamps out of order")
         except (AttributeError, TypeError, ValueError, ValidationError) as exc:
             raise ServiceError("invalid_speech_response", "Whisper trả transcript/timestamps không hợp lệ.") from exc
         return _result(text, words, duration, started, "groq", None, getattr(response, "language", language))
+
+
+def _request_transcription(
+    api,
+    audio,
+    language: str | None,
+    *,
+    retry: bool,
+):
+    audio.seek(0)
+    return api.audio.transcriptions.create(
+        model=SPEECH_MODEL,
+        file=audio,
+        # A slightly different decoding path is useful only after a malformed
+        # or known hallucinated first response.
+        temperature=0.2 if retry else 0.0,
+        response_format="verbose_json",
+        timestamp_granularities=["word", "segment"],
+        **({"language": language} if language else {}),
+    )
+
+
+def _wav_levels(audio_path: Path) -> tuple[float, float]:
+    """Return RMS and peak levels for diagnostics without retaining user audio."""
+    with wave.open(str(audio_path), "rb") as wav:
+        samples = array.array("h", wav.readframes(wav.getnframes()))
+    if sys.byteorder != "little":
+        samples.byteswap()
+    if not samples:
+        return -math.inf, -math.inf
+    peak = max(abs(sample) for sample in samples)
+    rms = math.sqrt(sum(sample * sample for sample in samples) / len(samples))
+
+    def dbfs(value: float) -> float:
+        return -math.inf if value <= 0 else 20 * math.log10(value / 32768.0)
+
+    return dbfs(rms), dbfs(peak)
+
+
+def _validated_transcription(response, duration: float) -> tuple[str, list[WordTimestamp]]:
+    if not isinstance(response.text, str):
+        raise ValueError("missing transcript")
+    text = response.text.strip()
+    if not text:
+        return "", []
+
+    try:
+        words = [
+            WordTimestamp.model_validate(w.model_dump() if hasattr(w, "model_dump") else w)
+            for w in (getattr(response, "words", None) or [])
+        ]
+    except (AttributeError, TypeError, ValueError, ValidationError):
+        # The transcript remains useful even when Groq omits or malforms the
+        # optional word-level timing data.
+        return text, []
+
+    if (
+        not words
+        or any(w.end > duration + 0.5 for w in words)
+        or any(b.start < a.start for a, b in zip(words, words[1:]))
+    ):
+        return text, []
+    return text, words
+
+
+def _unreliable_transcript_reason(text: str) -> str | None:
+    """Reject only known stock subtitle hallucinations, avoiding false positives."""
+    if not text:
+        return None
+
+    normalized = " ".join(unicodedata.normalize("NFC", text).casefold().split())
+    if any(phrase in normalized for phrase in KNOWN_HALLUCINATION_PHRASES):
+        return "known_hallucination_phrase"
+    return None
 
 
 def _result(text, words, duration, started, provider, reason, language) -> dict:
